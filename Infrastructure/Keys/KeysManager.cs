@@ -1,0 +1,32 @@
+using Application.Keys;
+using OtpNet;
+
+namespace Infrastructure.Keys;
+
+public class KeysManager : IKeysManager
+{
+    public string GenerateSha1Key()
+    {
+        var key = KeyGeneration.GenerateRandomKey(20);
+        return Base32Encoding.ToString(key);
+    }
+
+    public string GenerateTotpCode()
+    {
+        var authKey = GenerateSha1Key();
+        var key = Base32Encoding.ToBytes(authKey);
+        return new Totp(key).ComputeTotp(DateTime.UtcNow);
+    }
+
+    public string GenerateTotpUri(string key, string email, string issuer)
+    {
+        var otp = new OtpUri(OtpType.Totp, key, email, issuer);
+        return otp.ToString()!;
+    }
+
+    public bool ValidateTotpCode(string key, string totpCode)
+    {
+        var authKey = Base32Encoding.ToBytes(key);
+        return new Totp(authKey).VerifyTotp(DateTime.UtcNow, totpCode, out _);
+    }
+}
