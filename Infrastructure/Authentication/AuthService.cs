@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Application.Authentication;
 using Application.Authentication.Data;
 using Application.Authentication.Exceptions;
@@ -11,9 +12,9 @@ using Domain.Data;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Exceptions;
+using Infrastructure.Authentication.Extensions;
 using Infrastructure.Store;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Authentication;
 
@@ -311,6 +312,12 @@ public class AuthService : IAuthService
         await _context.SaveChangesAsync();
     }
 
+    public async Task ModifyPasswordAsync(ClaimsPrincipal principal, ModifyPasswordDto dto)
+    {
+        var auth = principal.ToAuthUser();
+        await ModifyPasswordAsync(auth, dto);
+    }
+
     public async Task<TokenData> RefreshTokenAsync(TokenData token)
     {
         var userId = _tokenProvider.ExtractUserId(token.AccessToken);
@@ -366,6 +373,12 @@ public class AuthService : IAuthService
             .ExecuteUpdateAsync(set => set.SetProperty(t => t.Revoked, true));
     }
 
+    public async Task RevokeRefreshTokensAsync(ClaimsPrincipal principal)
+    {
+        var auth = principal.ToAuthUser();
+        await RevokeRefreshTokensAsync(auth);
+    }
+
     public async Task ActivateTwoFactorAuthAsync(AuthUser auth)
     {
         var user = await _context
@@ -403,6 +416,12 @@ public class AuthService : IAuthService
         await _notificationSender.SendEmailAsync(email);
     }
 
+    public async Task ActivateTwoFactorAuthAsync(ClaimsPrincipal principal)
+    {
+        var auth = principal.ToAuthUser();
+        await ActivateTwoFactorAuthAsync(auth);
+    }
+
     public async Task ConfirmTwoFactorAuthActivationAsync(AuthUser auth, ConfirmTwoFactorAuthActivationDto dto)
     {
         var user = await _context
@@ -425,6 +444,14 @@ public class AuthService : IAuthService
         await _context.SaveChangesAsync();
     }
 
+    public async Task ConfirmTwoFactorAuthActivationAsync(
+        ClaimsPrincipal principal,
+        ConfirmTwoFactorAuthActivationDto dto)
+    {
+        var auth = principal.ToAuthUser();
+        await ConfirmTwoFactorAuthActivationAsync(auth, dto);
+    }
+
     public async Task DeactivateTwoFactorAuthAsync(AuthUser auth, DeactivateTwoFactorAuthDto dto)
     {
         var user = await _context
@@ -445,5 +472,11 @@ public class AuthService : IAuthService
         user.TwoFactorAuth.Enabled = false;
 
         await _context.SaveChangesAsync();
+    }
+
+    public async Task DeactivateTwoFactorAuthAsync(ClaimsPrincipal principal, DeactivateTwoFactorAuthDto dto)
+    {
+        var auth = principal.ToAuthUser();
+        await DeactivateTwoFactorAuthAsync(auth, dto);
     }
 }
