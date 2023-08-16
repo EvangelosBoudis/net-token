@@ -1,12 +1,13 @@
 using System.Net;
 using System.Net.Mail;
+using Application.Notification;
 using Application.Notification.Data;
 using Application.Notification.Exceptions;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Notification;
 
-public class NotificationSender
+public class NotificationSender : INotificationSender
 {
     private readonly MailOptions _options;
 
