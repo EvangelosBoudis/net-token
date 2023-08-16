@@ -16,7 +16,7 @@ namespace Infrastructure.Injection.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services)
+    public static void AddInfrastructure(this IServiceCollection services)
     {
         services.AddDbContext<DataContext>();
 
@@ -33,7 +33,5 @@ public static class ServiceCollectionExtensions
         services.AddScoped<INotificationSender, NotificationSender>();
         services.AddScoped<ITokenProvider, TokenProvider>();
         services.AddScoped<IAuthService, AuthService>();
-
-        throw new NotImplementedException();
     }
 }
