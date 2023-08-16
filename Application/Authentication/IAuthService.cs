@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Application.Authentication.Data;
 using Domain.Data;
 
@@ -21,13 +22,23 @@ public interface IAuthService
 
     Task ModifyPasswordAsync(AuthUser auth, ModifyPasswordDto dto);
 
+    Task ModifyPasswordAsync(ClaimsPrincipal principal, ModifyPasswordDto dto);
+
     Task<TokenData> RefreshTokenAsync(TokenData token);
 
     Task RevokeRefreshTokensAsync(AuthUser auth);
 
+    Task RevokeRefreshTokensAsync(ClaimsPrincipal principal);
+
     Task ActivateTwoFactorAuthAsync(AuthUser auth);
+
+    Task ActivateTwoFactorAuthAsync(ClaimsPrincipal principal);
 
     Task ConfirmTwoFactorAuthActivationAsync(AuthUser auth, ConfirmTwoFactorAuthActivationDto dto);
 
+    Task ConfirmTwoFactorAuthActivationAsync(ClaimsPrincipal principal, ConfirmTwoFactorAuthActivationDto dto);
+
     Task DeactivateTwoFactorAuthAsync(AuthUser auth, DeactivateTwoFactorAuthDto dto);
+
+    Task DeactivateTwoFactorAuthAsync(ClaimsPrincipal principal, DeactivateTwoFactorAuthDto dto);
 }
