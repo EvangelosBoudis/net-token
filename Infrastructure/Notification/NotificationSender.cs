@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Mail;
 using Application.Notification.Data;
 using Application.Notification.Exceptions;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Notification;
 
@@ -9,9 +10,9 @@ public class NotificationSender
 {
     private readonly MailOptions _options;
 
-    public NotificationSender(MailOptions options)
+    public NotificationSender(IOptions<MailOptions> options)
     {
-        _options = options;
+        _options = options.Value;
     }
 
     public async Task SendEmailAsync(EmailDto email)

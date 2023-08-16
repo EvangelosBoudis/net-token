@@ -7,6 +7,7 @@ using Application.Token.Data;
 using Application.Token.Exceptions;
 using Domain.Data;
 using Domain.Entities;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Infrastructure.Token;
@@ -16,9 +17,9 @@ public class TokenProvider : ITokenProvider
     private readonly TokenOptions _options;
     private readonly SymmetricSecurityKey _securityKey;
 
-    public TokenProvider(TokenOptions options)
+    public TokenProvider(IOptions<TokenOptions> options)
     {
-        _options = options;
+        _options = options.Value;
         _securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SecretKey));
     }
 

@@ -15,6 +15,7 @@ using Domain.Exceptions;
 using Infrastructure.Authentication.Extensions;
 using Infrastructure.Store;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Authentication;
 
@@ -30,14 +31,14 @@ public class AuthService : IAuthService
 
     public AuthService(
         DataContext context,
-        TokenOptions options,
+        IOptions<TokenOptions> options,
         IKeysManager keysManager,
         ITokenProvider tokenProvider,
         IPasswordHandler passwordHandler,
         INotificationSender notificationSender)
     {
         _context = context;
-        _options = options;
+        _options = options.Value;
         _keysManager = keysManager;
         _tokenProvider = tokenProvider;
         _passwordHandler = passwordHandler;
