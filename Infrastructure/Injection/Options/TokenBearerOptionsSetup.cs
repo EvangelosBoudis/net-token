@@ -10,9 +10,9 @@ public class TokenBearerOptionsSetup : IConfigureNamedOptions<JwtBearerOptions>
 {
     private readonly TokenOptions _options;
 
-    public TokenBearerOptionsSetup(TokenOptions options)
+    public TokenBearerOptionsSetup(IOptions<TokenOptions> options)
     {
-        _options = options;
+        _options = options.Value;
     }
 
     public void Configure(JwtBearerOptions options)
