@@ -3,6 +3,7 @@ using Application.Keys;
 using Application.Notification;
 using Application.Notification.Data;
 using Application.Password;
+using Application.Repository;
 using Application.Token;
 using Application.Token.Data;
 using Infrastructure.Authentication;
@@ -11,6 +12,7 @@ using Infrastructure.Keys;
 using Infrastructure.Notification;
 using Infrastructure.Password;
 using Infrastructure.Store;
+using Infrastructure.Store.Repository;
 using Infrastructure.Token;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -33,6 +35,11 @@ public static class ServiceCollectionExtensions
 
         services.ConfigureOptions<TokenBearerOptionsSetup>();
         services.ConfigureOptions<AuthenticationOptionsSetup>();
+
+        services.AddScoped<IChallengeRepository, ChallengeRepository>();
+        services.AddScoped<IOtpRepository, OtpRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
 
         services.AddScoped<IPasswordHandler, PasswordHandler>();
         services.AddScoped<IKeysManager, KeysManager>();
