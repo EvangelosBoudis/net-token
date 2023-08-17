@@ -1,0 +1,122 @@
+###
+# @name sign-up
+POST http://localhost:5105/api/auth/sign-up
+Content-Type: application/json
+
+{
+  "email": "evangelos.boudis@gmail.com",
+  "username": "Evangelos",
+  "password": "ELAmesa123@@@"
+}
+
+###
+# @name confirm-sign-up
+POST http://localhost:5105/api/auth/confirm-sign-up
+Content-Type: application/json
+
+{
+  "email": "evangelos.boudis@gmail.com",
+  "confirmationCode": "890112"
+}
+
+###
+# @name resend-sign-up-code
+POST http://localhost:5105/api/auth/resend-sign-up-code
+Content-Type: application/json
+
+{
+  "email": "evangelos.boudis@gmail.com"
+}
+
+###
+# @name sign-in
+POST http://localhost:5105/api/auth/sign-in
+Content-Type: application/json
+
+{
+  "email": "evangelos.boudis@gmail.com",
+  "password": "ELAmesa123@@!"
+}
+
+###
+# @name two-factor-sign-in
+POST http://localhost:5105/api/auth/two-factor-sign-in
+Content-Type: application/json
+
+{
+  "challengeKey": "FHJ4XM2MKSI5O2BUCZZVROQX6M3NFN6W",
+  "confirmationCode": "852166"
+}
+
+###
+# @name reset-password
+PUT http://localhost:5105/api/auth/reset-password
+Content-Type: application/json
+
+{
+  "email": "evangelos.boudis@gmail.com"
+}
+
+###
+# @name confirm-reset-password
+PUT http://localhost:5105/api/auth/confirm-reset-password
+Content-Type: application/json
+
+{
+  "email": "evangelos.boudis@gmail.com",
+  "password": "ELAmesa123@@!",
+  "confirmationCode": "097725"
+}
+
+###
+# @name modify-password
+PUT http://localhost:5105/api/auth/modify-password
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4NGUxZmE1ZC1kZjZkLTRjYmItOTBmYy04MThiM2JlODQxMDgiLCJ1bmlxdWVfbmFtZSI6IkV2YW5nZWxvcyIsImVtYWlsIjoiZXZhbmdlbG9zLmJvdWRpc0BnbWFpbC5jb20iLCJwaG9uZV9udW1iZXIiOiIiLCJwaG9uZV9udW1iZXJfdmVyaWZpZWQiOiJmYWxzZSIsInR3b19mYWN0b3JfZW5hYmxlZCI6ImZhbHNlIiwibmJmIjoxNjkwNjE3NDQwLCJleHAiOjE2OTA2MTgwNDAsImlzcyI6Imh0dHBzOi8vYXV0aC1zZXJ2ZXIuY29tIiwiYXVkIjoiaHR0cHM6Ly9yZXNvdXJjZS1zZXJ2ZXIuY29tIn0.6vZWMlifR287mJ_BqHJCUswQpI5xt_aXPBl7cZ2XYww
+
+{
+  "currentPassword": "ELAmesa123@@!",
+  "password": "ELAmesa123@@"
+}
+
+###
+# @name refresh-token
+POST http://localhost:5105/api/auth/refresh-token
+Content-Type: application/json
+
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4NGUxZmE1ZC1kZjZkLTRjYmItOTBmYy04MThiM2JlODQxMDgiLCJ1bmlxdWVfbmFtZSI6IkV2YW5nZWxvcyIsImVtYWlsIjoiZXZhbmdlbG9zLmJvdWRpc0BnbWFpbC5jb20iLCJwaG9uZV9udW1iZXIiOiIiLCJwaG9uZV9udW1iZXJfdmVyaWZpZWQiOiJmYWxzZSIsInR3b19mYWN0b3JfZW5hYmxlZCI6ImZhbHNlIiwibmJmIjoxNjkwNjE3ODcxLCJleHAiOjE2OTA2MTg0NzEsImlzcyI6Imh0dHBzOi8vYXV0aC1zZXJ2ZXIuY29tIiwiYXVkIjoiaHR0cHM6Ly9yZXNvdXJjZS1zZXJ2ZXIuY29tIn0.if4r3yk4pOAbyufzkHosU-fKWs2PQFs8NJfISYIacPI",
+  "refreshToken": "KuT951h9ArqHICJXGnRy+OIvSSvBi7ixOAEMR7KSO9vEeiqFkaeT9KrDos5fZrM+POOuJIF4oolcrhrPwGC2kw=="
+}
+
+###
+# @name revoke-token
+POST http://localhost:5105/api/auth/revoke-token
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4NGUxZmE1ZC1kZjZkLTRjYmItOTBmYy04MThiM2JlODQxMDgiLCJ1bmlxdWVfbmFtZSI6IkV2YW5nZWxvcyIsImVtYWlsIjoiZXZhbmdlbG9zLmJvdWRpc0BnbWFpbC5jb20iLCJwaG9uZV9udW1iZXIiOiIiLCJwaG9uZV9udW1iZXJfdmVyaWZpZWQiOiJmYWxzZSIsInR3b19mYWN0b3JfZW5hYmxlZCI6ImZhbHNlIiwibmJmIjoxNjkwNjE3ODcxLCJleHAiOjE2OTA2MTg0NzEsImlzcyI6Imh0dHBzOi8vYXV0aC1zZXJ2ZXIuY29tIiwiYXVkIjoiaHR0cHM6Ly9yZXNvdXJjZS1zZXJ2ZXIuY29tIn0.if4r3yk4pOAbyufzkHosU-fKWs2PQFs8NJfISYIacPI
+
+###
+# @name activate-two-factor-auth
+POST http://localhost:5105/api/auth/activate-two-factor-auth
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4NGUxZmE1ZC1kZjZkLTRjYmItOTBmYy04MThiM2JlODQxMDgiLCJ1bmlxdWVfbmFtZSI6IkV2YW5nZWxvcyIsImVtYWlsIjoiZXZhbmdlbG9zLmJvdWRpc0BnbWFpbC5jb20iLCJwaG9uZV9udW1iZXIiOiIiLCJwaG9uZV9udW1iZXJfdmVyaWZpZWQiOiJmYWxzZSIsInR3b19mYWN0b3JfZW5hYmxlZCI6InRydWUiLCJuYmYiOjE2OTA2MTk2MjMsImV4cCI6MTY5MDYyMDIyMywiaXNzIjoiaHR0cHM6Ly9hdXRoLXNlcnZlci5jb20iLCJhdWQiOiJodHRwczovL3Jlc291cmNlLXNlcnZlci5jb20ifQ.MJ3AIbEwxxdZ9dwpLG1K3e3Pti0KMiSWCjLDcM8XEzc
+
+###
+# @name confirm-two-factor-auth-activation
+POST http://localhost:5105/api/auth/confirm-two-factor-auth-activation
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4NGUxZmE1ZC1kZjZkLTRjYmItOTBmYy04MThiM2JlODQxMDgiLCJ1bmlxdWVfbmFtZSI6IkV2YW5nZWxvcyIsImVtYWlsIjoiZXZhbmdlbG9zLmJvdWRpc0BnbWFpbC5jb20iLCJwaG9uZV9udW1iZXIiOiIiLCJwaG9uZV9udW1iZXJfdmVyaWZpZWQiOiJmYWxzZSIsInR3b19mYWN0b3JfZW5hYmxlZCI6InRydWUiLCJuYmYiOjE2OTA2MTk2MjMsImV4cCI6MTY5MDYyMDIyMywiaXNzIjoiaHR0cHM6Ly9hdXRoLXNlcnZlci5jb20iLCJhdWQiOiJodHRwczovL3Jlc291cmNlLXNlcnZlci5jb20ifQ.MJ3AIbEwxxdZ9dwpLG1K3e3Pti0KMiSWCjLDcM8XEzc
+
+{
+  "confirmationCode": "069000"
+}
+
+###
+# @name deactivate-two-factor-auth
+POST http://localhost:5105/api/auth/deactivate-two-factor-auth
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4NGUxZmE1ZC1kZjZkLTRjYmItOTBmYy04MThiM2JlODQxMDgiLCJ1bmlxdWVfbmFtZSI6IkV2YW5nZWxvcyIsImVtYWlsIjoiZXZhbmdlbG9zLmJvdWRpc0BnbWFpbC5jb20iLCJwaG9uZV9udW1iZXIiOiIiLCJwaG9uZV9udW1iZXJfdmVyaWZpZWQiOiJmYWxzZSIsInR3b19mYWN0b3JfZW5hYmxlZCI6InRydWUiLCJuYmYiOjE2OTA2MTk2MjMsImV4cCI6MTY5MDYyMDIyMywiaXNzIjoiaHR0cHM6Ly9hdXRoLXNlcnZlci5jb20iLCJhdWQiOiJodHRwczovL3Jlc291cmNlLXNlcnZlci5jb20ifQ.MJ3AIbEwxxdZ9dwpLG1K3e3Pti0KMiSWCjLDcM8XEzc
+
+{
+  "confirmationCode": "698260"
+}
