@@ -279,7 +279,7 @@ public class AuthService : IAuthService
         if (user is null) throw new AuthException(ErrorCode.InvalidToken);
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
 
-        var refreshToken = await _refreshTokenRepository.FindActiveByValue(token.RefreshToken);
+        var refreshToken = await _refreshTokenRepository.FindActiveByValueAsync(token.RefreshToken);
         if (refreshToken is null) throw new AuthException(ErrorCode.InvalidToken);
         if (refreshToken.ExpiredAt < DateTime.UtcNow) throw new AuthException(ErrorCode.ExpiredToken);
 

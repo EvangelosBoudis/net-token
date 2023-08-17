@@ -10,7 +10,7 @@ public class RefreshTokenRepository : RepositoryBase<RefreshToken>, IRefreshToke
     {
     }
 
-    public async Task<RefreshToken?> FindActiveByValue(string value)
+    public async Task<RefreshToken?> FindActiveByValueAsync(string value)
     {
         return await Context
             .Set<RefreshToken>()
