@@ -6,6 +6,7 @@ using Application.Keys;
 using Application.Notification;
 using Application.Notification.Data;
 using Application.Password;
+using Application.Repository;
 using Application.Token;
 using Application.Token.Data;
 using Domain.Data;
@@ -14,7 +15,6 @@ using Domain.Enums;
 using Domain.Exceptions;
 using Infrastructure.Authentication.Extensions;
 using Infrastructure.Store;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Authentication;
@@ -29,13 +29,22 @@ public class AuthService : IAuthService
     private readonly IPasswordHandler _passwordHandler;
     private readonly INotificationSender _notificationSender;
 
+    private readonly IUserRepository _userRepository;
+    private readonly IOtpRepository _otpRepository;
+    private readonly IChallengeRepository _challengeRepository;
+    private readonly IRefreshTokenRepository _refreshTokenRepository;
+
     public AuthService(
         DataContext context,
         IOptions<TokenOptions> options,
         IKeysManager keysManager,
         ITokenProvider tokenProvider,
         IPasswordHandler passwordHandler,
-        INotificationSender notificationSender)
+        INotificationSender notificationSender,
+        IUserRepository userRepository,
+        IOtpRepository otpRepository,
+        IChallengeRepository challengeRepository,
+        IRefreshTokenRepository refreshTokenRepository)
     {
         _context = context;
         _options = options.Value;
@@ -43,16 +52,16 @@ public class AuthService : IAuthService
         _tokenProvider = tokenProvider;
         _passwordHandler = passwordHandler;
         _notificationSender = notificationSender;
+        _userRepository = userRepository;
+        _otpRepository = otpRepository;
+        _challengeRepository = challengeRepository;
+        _refreshTokenRepository = refreshTokenRepository;
     }
 
     public async Task SignUpAsync(SignUpDto dto)
     {
-        var count = await _context
-            .Set<User>()
-            .Where(u => u.Username == dto.Username || u.Email == dto.Email)
-            .CountAsync();
-
-        if (count > 0) throw new AuthException(ErrorCode.InvalidUsernameOrEmail);
+        var exists = await _userRepository.ExistsByUsernameOrEmailAsync(dto.Username, dto.Email);
+        if (exists) throw new AuthException(ErrorCode.InvalidUsernameOrEmail);
 
         var code = _keysManager.GenerateTotpCode();
         var encrypted = _passwordHandler.Encrypt(dto.Password);
@@ -75,8 +84,7 @@ public class AuthService : IAuthService
             }
         };
 
-        await _context.AddAsync(user);
-        await _context.SaveChangesAsync();
+        await _userRepository.SaveAndFlushAsync(user);
 
         var email = new EmailDto(dto.Email, "Email Confirmation", code);
         await _notificationSender.SendEmailAsync(email);
@@ -84,22 +92,12 @@ public class AuthService : IAuthService
 
     public async Task ConfirmSignUpAsync(ConfirmSignUpDto dto)
     {
-        var user = await _context
-            .Set<User>()
-            .Where(u => u.Email == dto.Email)
-            .Include(u => u.Account)
-            .FirstOrDefaultAsync();
-
+        var user = await _userRepository.FindByEmailAsync(dto.Email);
         if (user is null) throw new AuthException(ErrorCode.IncorrectEmail);
         if (user.Account.Confirmed) throw new AuthException(ErrorCode.AlreadyConfirmedAccount);
 
-        var code = await _context
-            .Set<Otp>()
-            .Where(t =>
-                t.UserId == user.Id && t.Type == OtpType.RegisterAccount &&
-                t.Code == dto.ConfirmationCode && !t.Disabled && !t.Redeemed)
-            .FirstOrDefaultAsync();
-
+        var code = await _otpRepository.FindByUserIdCodeAndTypeAsync(
+            user.Id, dto.ConfirmationCode, OtpType.RegisterAccount);
         if (code is null) throw new AuthException(ErrorCode.IncorrectCode);
         if (code.ExpiredAt < DateTime.UtcNow) throw new AuthException(ErrorCode.ExpiredCode);
 
@@ -112,21 +110,11 @@ public class AuthService : IAuthService
 
     public async Task ResendSignUpCodeAsync(ResendSignUpCodeDto dto)
     {
-        var user = await _context
-            .Set<User>()
-            .Where(u => u.Email == dto.Email)
-            .Include(u => u.Account)
-            .FirstOrDefaultAsync();
-
+        var user = await _userRepository.FindByEmailAsync(dto.Email);
         if (user is null) throw new AuthException(ErrorCode.IncorrectEmail);
         if (user.Account.Confirmed) throw new AuthException(ErrorCode.AlreadyConfirmedAccount);
 
-        await _context
-            .Set<Otp>()
-            .Where(t =>
-                t.UserId == user.Id && t.Type == OtpType.RegisterAccount &&
-                t.ExpiredAt > DateTime.UtcNow && !t.Disabled && !t.Redeemed)
-            .ExecuteUpdateAsync(set => set.SetProperty(t => t.Disabled, true));
+        await _otpRepository.UpdateAsDisabledActiveCodesAsync(user.Id, OtpType.RegisterAccount);
 
         var code = _keysManager.GenerateTotpCode();
 
@@ -145,13 +133,7 @@ public class AuthService : IAuthService
 
     public async Task<SignInResult> SignInAsync(SignInDto dto)
     {
-        var user = await _context
-            .Set<User>()
-            .Where(u => u.Email == dto.Email)
-            .Include(u => u.Account)
-            .Include(u => u.TwoFactorAuth)
-            .FirstOrDefaultAsync();
-
+        var user = await _userRepository.FindByEmailAsync(dto.Email);
         if (user is null) throw new AuthException(ErrorCode.IncorrectEmailOrPassword);
         if (!user.Account.Confirmed) throw new AuthException(ErrorCode.UnconfirmedAccount);
         if (user.Account.Locked && user.Account.LockEndAt > DateTime.UtcNow)
@@ -199,12 +181,7 @@ public class AuthService : IAuthService
 
     public async Task<SignInResult> TwoFactorSignAsync(TwoFactorSignInDto dto)
     {
-        var challenge = await _context
-            .Set<Challenge>()
-            .Where(c => c.Key == dto.ChallengeKey && !c.Redeemed)
-            .Include(c => c.TwoFactorAuth.User.Account)
-            .FirstOrDefaultAsync();
-
+        var challenge = await _challengeRepository.FindByKeyAsync(dto.ChallengeKey);
         if (challenge is null) throw new AuthException(ErrorCode.IncorrectKey);
         if (challenge.ExpiredAt < DateTime.UtcNow) throw new AuthException(ErrorCode.ExpiredKey);
         if (challenge.TwoFactorAuth.User.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
@@ -229,22 +206,12 @@ public class AuthService : IAuthService
 
     public async Task ResetPasswordAsync(ResetPasswordDto dto)
     {
-        var user = await _context
-            .Set<User>()
-            .Where(u => u.Email == dto.Email)
-            .Include(u => u.Account)
-            .FirstOrDefaultAsync();
-
+        var user = await _userRepository.FindByEmailAsync(dto.Email);
         if (user is null) throw new AuthException(ErrorCode.IncorrectEmail);
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
         if (!user.Account.Confirmed) throw new AuthException(ErrorCode.UnconfirmedAccount);
 
-        await _context
-            .Set<Otp>()
-            .Where(t =>
-                t.UserId == user.Id && t.Type == OtpType.ResetPassword &&
-                t.ExpiredAt > DateTime.UtcNow && !t.Disabled && !t.Redeemed)
-            .ExecuteUpdateAsync(set => set.SetProperty(t => t.Disabled, true));
+        await _otpRepository.UpdateAsDisabledActiveCodesAsync(user.Id, OtpType.ResetPassword);
 
         var code = _keysManager.GenerateTotpCode();
 
@@ -263,23 +230,13 @@ public class AuthService : IAuthService
 
     public async Task ConfirmResetPasswordAsync(ConfirmResetPasswordDto dto)
     {
-        var user = await _context
-            .Set<User>()
-            .Where(u => u.Email == dto.Email)
-            .Include(u => u.Account)
-            .FirstOrDefaultAsync();
-
+        var user = await _userRepository.FindByEmailAsync(dto.Email);
         if (user is null) throw new AuthException(ErrorCode.IncorrectEmail);
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
         if (!user.Account.Confirmed) throw new AuthException(ErrorCode.UnconfirmedAccount);
 
-        var code = await _context
-            .Set<Otp>()
-            .Where(t =>
-                t.UserId == user.Id && t.Type == OtpType.ResetPassword &&
-                t.Code == dto.ConfirmationCode && !t.Disabled && !t.Redeemed)
-            .FirstOrDefaultAsync();
-
+        var code = await _otpRepository.FindByUserIdCodeAndTypeAsync(
+            user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
         if (code is null) throw new AuthException(ErrorCode.IncorrectCode);
         if (code.ExpiredAt < DateTime.UtcNow) throw new AuthException(ErrorCode.ExpiredCode);
 
@@ -294,12 +251,7 @@ public class AuthService : IAuthService
 
     public async Task ModifyPasswordAsync(AuthUser auth, ModifyPasswordDto dto)
     {
-        var user = await _context
-            .Set<User>()
-            .Where(u => u.Id == auth.Id)
-            .Include(u => u.Account)
-            .FirstOrDefaultAsync();
-
+        var user = await _userRepository.FindByIdAsync(auth.Id);
         if (user is null) throw new AuthException(ErrorCode.InvalidToken);
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
 
@@ -323,21 +275,11 @@ public class AuthService : IAuthService
     {
         var userId = _tokenProvider.ExtractUserId(token.AccessToken);
 
-        var user = await _context
-            .Set<User>()
-            .Where(u => u.Id == userId)
-            .Include(u => u.Account)
-            .Include(u => u.TwoFactorAuth)
-            .FirstOrDefaultAsync();
-
+        var user = await _userRepository.FindByIdAsync(userId);
         if (user is null) throw new AuthException(ErrorCode.InvalidToken);
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
 
-        var refreshToken = await _context
-            .Set<RefreshToken>()
-            .Where(t => t.Value == token.RefreshToken && !t.Disabled && !t.Revoked)
-            .FirstOrDefaultAsync();
-
+        var refreshToken = await _refreshTokenRepository.FindActiveByValue(token.RefreshToken);
         if (refreshToken is null) throw new AuthException(ErrorCode.InvalidToken);
         if (refreshToken.ExpiredAt < DateTime.UtcNow) throw new AuthException(ErrorCode.ExpiredToken);
 
@@ -358,20 +300,11 @@ public class AuthService : IAuthService
 
     public async Task RevokeRefreshTokensAsync(AuthUser auth)
     {
-        var user = await _context
-            .Set<User>()
-            .AsNoTracking()
-            .Where(u => u.Id == auth.Id)
-            .Include(u => u.Account)
-            .FirstOrDefaultAsync();
-
+        var user = await _userRepository.FindByIdNoTrackingAsync(auth.Id);
         if (user is null) throw new AuthException(ErrorCode.InvalidToken);
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
 
-        await _context
-            .Set<RefreshToken>()
-            .Where(r => r.UserId == auth.Id && !r.Disabled && !r.Revoked)
-            .ExecuteUpdateAsync(set => set.SetProperty(t => t.Revoked, true));
+        await _refreshTokenRepository.UpdateAsRevokedAsync(auth.Id);
     }
 
     public async Task RevokeRefreshTokensAsync(ClaimsPrincipal principal)
@@ -382,13 +315,7 @@ public class AuthService : IAuthService
 
     public async Task ActivateTwoFactorAuthAsync(AuthUser auth)
     {
-        var user = await _context
-            .Set<User>()
-            .Where(u => u.Id == auth.Id)
-            .Include(u => u.Account)
-            .Include(u => u.TwoFactorAuth)
-            .FirstOrDefaultAsync();
-
+        var user = await _userRepository.FindByIdAsync(auth.Id);
         if (user is null) throw new AuthException(ErrorCode.InvalidToken);
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
         if (user.TwoFactorAuth is not null && user.TwoFactorAuth.Enabled)
@@ -425,13 +352,7 @@ public class AuthService : IAuthService
 
     public async Task ConfirmTwoFactorAuthActivationAsync(AuthUser auth, ConfirmTwoFactorAuthActivationDto dto)
     {
-        var user = await _context
-            .Set<User>()
-            .Where(u => u.Id == auth.Id)
-            .Include(u => u.Account)
-            .Include(u => u.TwoFactorAuth)
-            .FirstOrDefaultAsync();
-
+        var user = await _userRepository.FindByIdAsync(auth.Id);
         if (user is null) throw new AuthException(ErrorCode.InvalidToken);
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
         if (user.TwoFactorAuth is null) throw new AuthException(ErrorCode.EmptyAuthenticatorKey);
@@ -455,13 +376,7 @@ public class AuthService : IAuthService
 
     public async Task DeactivateTwoFactorAuthAsync(AuthUser auth, DeactivateTwoFactorAuthDto dto)
     {
-        var user = await _context
-            .Set<User>()
-            .Where(u => u.Id == auth.Id)
-            .Include(u => u.Account)
-            .Include(u => u.TwoFactorAuth)
-            .FirstOrDefaultAsync();
-
+        var user = await _userRepository.FindByIdAsync(auth.Id);
         if (user is null) throw new AuthException(ErrorCode.InvalidToken);
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
         if (user.TwoFactorAuth is null || !user.TwoFactorAuth.Enabled)
