@@ -24,6 +24,7 @@ public static class ServiceCollectionExtensions
     {
         var connection = configuration.GetSection("Datasource").Get<string>()!;
         services.AddDbContext<DataContext>(options => { options.UseSqlite(connection); });
+        services.BuildServiceProvider().GetRequiredService<DataContext>().Database.MigrateAsync();
 
         services.AddAuthentication().AddJwtBearer();
 
