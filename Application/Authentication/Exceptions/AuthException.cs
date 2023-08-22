@@ -1,6 +1,6 @@
 namespace Application.Authentication.Exceptions;
 
-public class AuthException : SystemException
+public class AuthException : Exception
 {
     public string ErrorCode { get; }
 

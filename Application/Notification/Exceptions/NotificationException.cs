@@ -1,6 +1,6 @@
 namespace Application.Notification.Exceptions;
 
-public class NotificationException : SystemException
+public class NotificationException : Exception
 {
     public NotificationException()
     {
