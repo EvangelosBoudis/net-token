@@ -1,5 +1,5 @@
 using System.Linq.Expressions;
-using Application.Repository;
+using Application.Store.Repository;
 using Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
 

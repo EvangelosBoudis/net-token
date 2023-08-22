@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 
-namespace Application.Repository;
+namespace Application.Store.Repository;
 
 public interface ICrudRepository<TEntity, in TId> where TEntity : class
 {

@@ -1,6 +1,6 @@
 using Domain.Entities;
 
-namespace Application.Repository;
+namespace Application.Store.Repository;
 
 public interface IUserRepository : ICrudRepository<User, Guid>
 {

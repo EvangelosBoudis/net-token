@@ -1,7 +1,7 @@
 using Domain.Entities;
 using Domain.Enums;
 
-namespace Application.Repository;
+namespace Application.Store.Repository;
 
 public interface IOtpRepository : ICrudRepository<Otp, Guid>
 {
