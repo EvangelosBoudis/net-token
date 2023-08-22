@@ -1,6 +1,6 @@
 namespace Application.Token.Exceptions;
 
-public class TokenException : SystemException
+public class TokenException : Exception
 {
     public string ErrorCode { get; }
 
