@@ -66,7 +66,7 @@ public class AuthService : IAuthService
         var code = _keysManager.GenerateTotpCode();
         var encrypted = _passwordHandler.Encrypt(dto.Password);
 
-        var user = new User
+        await _userRepository.SaveAsync(new User
         {
             Username = dto.Username,
             Email = dto.Email,
@@ -82,9 +82,8 @@ public class AuthService : IAuthService
                     ExpiredAt = DateTime.UtcNow.AddMinutes(5)
                 }
             }
-        };
-
-        await _userRepository.SaveAndFlushAsync(user);
+        });
+        await _context.SaveChangesAsync();
 
         var email = new EmailDto(dto.Email, "Email Confirmation", code);
         await _notificationSender.SendEmailAsync(email);
@@ -92,13 +91,29 @@ public class AuthService : IAuthService
 
     public async Task ConfirmSignUpAsync(ConfirmSignUpDto dto)
     {
-        var user = await _userRepository.FindByEmailAsync(dto.Email);
-        if (user is null) throw new AuthException(ErrorCode.IncorrectEmail);
+        User user;
+        try
+        {
+            user = await _userRepository.FindByEmailAsync(dto.Email);
+        }
+        catch (EntityNotFoundException<User>)
+        {
+            throw new AuthException(ErrorCode.IncorrectEmail);
+        }
+
         if (user.Account.Confirmed) throw new AuthException(ErrorCode.AlreadyConfirmedAccount);
 
-        var code = await _otpRepository.FindByUserIdCodeAndTypeAsync(
-            user.Id, dto.ConfirmationCode, OtpType.RegisterAccount);
-        if (code is null) throw new AuthException(ErrorCode.IncorrectCode);
+        Otp code;
+        try
+        {
+            code = await _otpRepository.FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode,
+                OtpType.RegisterAccount);
+        }
+        catch (EntityNotFoundException<Otp>)
+        {
+            throw new AuthException(ErrorCode.IncorrectCode);
+        }
+
         if (code.ExpiredAt < DateTime.UtcNow) throw new AuthException(ErrorCode.ExpiredCode);
 
         code.Redeemed = true;
@@ -110,8 +125,16 @@ public class AuthService : IAuthService
 
     public async Task ResendSignUpCodeAsync(ResendSignUpCodeDto dto)
     {
-        var user = await _userRepository.FindByEmailAsync(dto.Email);
-        if (user is null) throw new AuthException(ErrorCode.IncorrectEmail);
+        User user;
+        try
+        {
+            user = await _userRepository.FindByEmailAsync(dto.Email);
+        }
+        catch (EntityNotFoundException<User>)
+        {
+            throw new AuthException(ErrorCode.IncorrectEmail);
+        }
+
         if (user.Account.Confirmed) throw new AuthException(ErrorCode.AlreadyConfirmedAccount);
 
         await _otpRepository.UpdateAsDisabledActiveCodesAsync(user.Id, OtpType.RegisterAccount);
@@ -133,8 +156,16 @@ public class AuthService : IAuthService
 
     public async Task<SignInResult> SignInAsync(SignInDto dto)
     {
-        var user = await _userRepository.FindByEmailAsync(dto.Email);
-        if (user is null) throw new AuthException(ErrorCode.IncorrectEmailOrPassword);
+        User user;
+        try
+        {
+            user = await _userRepository.FindByEmailAsync(dto.Email);
+        }
+        catch (EntityNotFoundException<User>)
+        {
+            throw new AuthException(ErrorCode.IncorrectEmailOrPassword);
+        }
+
         if (!user.Account.Confirmed) throw new AuthException(ErrorCode.UnconfirmedAccount);
         if (user.Account.Locked && user.Account.LockEndAt > DateTime.UtcNow)
             throw new AuthException(ErrorCode.LockedAccount);
@@ -181,8 +212,16 @@ public class AuthService : IAuthService
 
     public async Task<SignInResult> TwoFactorSignAsync(TwoFactorSignInDto dto)
     {
-        var challenge = await _challengeRepository.FindByKeyAsync(dto.ChallengeKey);
-        if (challenge is null) throw new AuthException(ErrorCode.IncorrectKey);
+        Challenge challenge;
+        try
+        {
+            challenge = await _challengeRepository.FindByKeyAsync(dto.ChallengeKey);
+        }
+        catch (EntityNotFoundException<Challenge>)
+        {
+            throw new AuthException(ErrorCode.IncorrectKey);
+        }
+
         if (challenge.ExpiredAt < DateTime.UtcNow) throw new AuthException(ErrorCode.ExpiredKey);
         if (challenge.TwoFactorAuth.User.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
 
@@ -206,8 +245,16 @@ public class AuthService : IAuthService
 
     public async Task ResetPasswordAsync(ResetPasswordDto dto)
     {
-        var user = await _userRepository.FindByEmailAsync(dto.Email);
-        if (user is null) throw new AuthException(ErrorCode.IncorrectEmail);
+        User user;
+        try
+        {
+            user = await _userRepository.FindByEmailAsync(dto.Email);
+        }
+        catch (EntityNotFoundException<User>)
+        {
+            throw new AuthException(ErrorCode.IncorrectEmail);
+        }
+
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
         if (!user.Account.Confirmed) throw new AuthException(ErrorCode.UnconfirmedAccount);
 
@@ -230,14 +277,30 @@ public class AuthService : IAuthService
 
     public async Task ConfirmResetPasswordAsync(ConfirmResetPasswordDto dto)
     {
-        var user = await _userRepository.FindByEmailAsync(dto.Email);
-        if (user is null) throw new AuthException(ErrorCode.IncorrectEmail);
+        User user;
+        try
+        {
+            user = await _userRepository.FindByEmailAsync(dto.Email);
+        }
+        catch (EntityNotFoundException<User>)
+        {
+            throw new AuthException(ErrorCode.IncorrectEmail);
+        }
+
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
         if (!user.Account.Confirmed) throw new AuthException(ErrorCode.UnconfirmedAccount);
 
-        var code = await _otpRepository.FindByUserIdCodeAndTypeAsync(
-            user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
-        if (code is null) throw new AuthException(ErrorCode.IncorrectCode);
+        Otp code;
+        try
+        {
+            code = await _otpRepository.FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode,
+                OtpType.ResetPassword);
+        }
+        catch (EntityNotFoundException<Otp>)
+        {
+            throw new AuthException(ErrorCode.IncorrectCode);
+        }
+
         if (code.ExpiredAt < DateTime.UtcNow) throw new AuthException(ErrorCode.ExpiredCode);
 
         var encrypted = _passwordHandler.Encrypt(dto.Password);
@@ -251,8 +314,16 @@ public class AuthService : IAuthService
 
     public async Task ModifyPasswordAsync(AuthUser auth, ModifyPasswordDto dto)
     {
-        var user = await _userRepository.FindByIdAsync(auth.Id);
-        if (user is null) throw new AuthException(ErrorCode.InvalidToken);
+        User user;
+        try
+        {
+            user = await _userRepository.FindByIdAsync(auth.Id);
+        }
+        catch (EntityNotFoundException<User>)
+        {
+            throw new AuthException(ErrorCode.InvalidToken);
+        }
+
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
 
         var matched = _passwordHandler.Decrypt(dto.CurrentPassword, user.PasswordHash, user.PasswordSalt);
@@ -275,22 +346,38 @@ public class AuthService : IAuthService
     {
         var userId = _tokenProvider.ExtractUserId(token.AccessToken);
 
-        var user = await _userRepository.FindByIdAsync(userId);
-        if (user is null) throw new AuthException(ErrorCode.InvalidToken);
+        User user;
+        try
+        {
+            user = await _userRepository.FindByIdAsync(userId);
+        }
+        catch (EntityNotFoundException<User>)
+        {
+            throw new AuthException(ErrorCode.InvalidToken);
+        }
+
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
 
-        var refreshToken = await _refreshTokenRepository.FindActiveByValueAsync(token.RefreshToken);
-        if (refreshToken is null) throw new AuthException(ErrorCode.InvalidToken);
-        if (refreshToken.ExpiredAt < DateTime.UtcNow) throw new AuthException(ErrorCode.ExpiredToken);
+        RefreshToken rt;
+        try
+        {
+            rt = await _refreshTokenRepository.FindActiveByValueAsync(token.RefreshToken);
+        }
+        catch (EntityNotFoundException<RefreshToken>)
+        {
+            throw new AuthException(ErrorCode.InvalidToken);
+        }
+
+        if (rt.ExpiredAt < DateTime.UtcNow) throw new AuthException(ErrorCode.ExpiredToken);
 
         var nToken = _tokenProvider.Generate(user);
 
-        refreshToken.Disabled = true;
+        rt.Disabled = true;
 
         user.RefreshTokens.Add(new RefreshToken
         {
             Value = nToken.RefreshToken,
-            ExpiredAt = refreshToken.ExpiredAt
+            ExpiredAt = rt.ExpiredAt
         });
 
         await _context.SaveChangesAsync();
@@ -300,8 +387,16 @@ public class AuthService : IAuthService
 
     public async Task RevokeRefreshTokensAsync(AuthUser auth)
     {
-        var user = await _userRepository.FindByIdNoTrackingAsync(auth.Id);
-        if (user is null) throw new AuthException(ErrorCode.InvalidToken);
+        User user;
+        try
+        {
+            user = await _userRepository.FindByIdNoTrackingAsync(auth.Id);
+        }
+        catch (EntityNotFoundException<User>)
+        {
+            throw new AuthException(ErrorCode.InvalidToken);
+        }
+
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
 
         await _refreshTokenRepository.UpdateAsRevokedAsync(auth.Id);
@@ -315,8 +410,16 @@ public class AuthService : IAuthService
 
     public async Task ActivateTwoFactorAuthAsync(AuthUser auth)
     {
-        var user = await _userRepository.FindByIdAsync(auth.Id);
-        if (user is null) throw new AuthException(ErrorCode.InvalidToken);
+        User user;
+        try
+        {
+            user = await _userRepository.FindByIdAsync(auth.Id);
+        }
+        catch (EntityNotFoundException<User>)
+        {
+            throw new AuthException(ErrorCode.InvalidToken);
+        }
+
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
         if (user.TwoFactorAuth is not null && user.TwoFactorAuth.Enabled)
             throw new AuthException(ErrorCode.AlreadyActivatedTwoFactorAuth);
@@ -352,8 +455,16 @@ public class AuthService : IAuthService
 
     public async Task ConfirmTwoFactorAuthActivationAsync(AuthUser auth, ConfirmTwoFactorAuthActivationDto dto)
     {
-        var user = await _userRepository.FindByIdAsync(auth.Id);
-        if (user is null) throw new AuthException(ErrorCode.InvalidToken);
+        User user;
+        try
+        {
+            user = await _userRepository.FindByIdAsync(auth.Id);
+        }
+        catch (EntityNotFoundException<User>)
+        {
+            throw new AuthException(ErrorCode.InvalidToken);
+        }
+
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
         if (user.TwoFactorAuth is null) throw new AuthException(ErrorCode.EmptyAuthenticatorKey);
         if (user.TwoFactorAuth.Enabled) throw new AuthException(ErrorCode.AlreadyActivatedTwoFactorAuth);
@@ -376,8 +487,16 @@ public class AuthService : IAuthService
 
     public async Task DeactivateTwoFactorAuthAsync(AuthUser auth, DeactivateTwoFactorAuthDto dto)
     {
-        var user = await _userRepository.FindByIdAsync(auth.Id);
-        if (user is null) throw new AuthException(ErrorCode.InvalidToken);
+        User user;
+        try
+        {
+            user = await _userRepository.FindByIdAsync(auth.Id);
+        }
+        catch (EntityNotFoundException<User>)
+        {
+            throw new AuthException(ErrorCode.InvalidToken);
+        }
+
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
         if (user.TwoFactorAuth is null || !user.TwoFactorAuth.Enabled)
             throw new AuthException(ErrorCode.NotActivatedTwoFactorAuth);

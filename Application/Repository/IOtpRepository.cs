@@ -3,9 +3,9 @@ using Domain.Enums;
 
 namespace Application.Repository;
 
-public interface IOtpRepository : IRepositoryBase<Otp>
+public interface IOtpRepository : ICrudRepository<Otp, Guid>
 {
-    Task<Otp?> FindByUserIdCodeAndTypeAsync(Guid userId, string code, OtpType type);
+    Task<Otp> FindByUserIdCodeAndTypeAsync(Guid userId, string code, OtpType type);
 
     Task UpdateAsDisabledActiveCodesAsync(Guid userId, OtpType type);
 }

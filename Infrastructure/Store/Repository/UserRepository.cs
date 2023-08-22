@@ -1,10 +1,11 @@
 using Application.Repository;
 using Domain.Entities;
+using Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Store.Repository;
 
-public class UserRepository : RepositoryBase<User>, IUserRepository
+public class UserRepository : CrudRepository<User, Guid>, IUserRepository
 {
     public UserRepository(DataContext context) : base(context)
     {
@@ -12,41 +13,45 @@ public class UserRepository : RepositoryBase<User>, IUserRepository
 
     public async Task<bool> ExistsByUsernameOrEmailAsync(string username, string email)
     {
-        var count = await Context
-            .Set<User>()
-            .Where(u => u.Username == username || u.Email == email)
-            .CountAsync();
-
-        return count > 0;
+        return await ExistsAsync(u => u.Username == username || u.Email == email);
     }
 
-    public async Task<User?> FindByIdNoTrackingAsync(Guid id)
+    public new async Task<User> FindByIdAsync(Guid primaryKey)
     {
-        return await Context
+        var entity = await Context
             .Set<User>()
-            .AsNoTracking()
-            .Where(u => u.Id == id)
-            .Include(u => u.Account)
-            .FirstOrDefaultAsync();
-    }
-
-    public async Task<User?> FindByIdAsync(Guid id)
-    {
-        return await Context
-            .Set<User>()
-            .Where(u => u.Id == id)
+            .Where(u => u.Id == primaryKey)
             .Include(u => u.Account)
             .Include(u => u.TwoFactorAuth)
             .FirstOrDefaultAsync();
+
+        if (entity is not null) return entity;
+        throw new EntityNotFoundException<User>();
     }
 
-    public async Task<User?> FindByEmailAsync(string email)
+    public async Task<User> FindByIdNoTrackingAsync(Guid primaryKey)
     {
-        return await Context
+        var entity = await Context
+            .Set<User>()
+            .AsNoTracking()
+            .Where(u => u.Id == primaryKey)
+            .Include(u => u.Account)
+            .FirstOrDefaultAsync();
+
+        if (entity is not null) return entity;
+        throw new EntityNotFoundException<User>();
+    }
+
+    public async Task<User> FindByEmailAsync(string email)
+    {
+        var entity = await Context
             .Set<User>()
             .Where(u => u.Email == email)
             .Include(u => u.Account)
             .Include(u => u.TwoFactorAuth)
             .FirstOrDefaultAsync();
+
+        if (entity is not null) return entity;
+        throw new EntityNotFoundException<User>();
     }
 }

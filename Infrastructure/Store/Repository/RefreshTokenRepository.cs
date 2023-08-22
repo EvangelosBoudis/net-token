@@ -4,18 +4,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Store.Repository;
 
-public class RefreshTokenRepository : RepositoryBase<RefreshToken>, IRefreshTokenRepository
+public class RefreshTokenRepository : CrudRepository<RefreshToken, Guid>, IRefreshTokenRepository
 {
     public RefreshTokenRepository(DataContext context) : base(context)
     {
     }
 
-    public async Task<RefreshToken?> FindActiveByValueAsync(string value)
+    public async Task<RefreshToken> FindActiveByValueAsync(string value)
     {
-        return await Context
-            .Set<RefreshToken>()
-            .Where(t => t.Value == value && !t.Disabled && !t.Revoked)
-            .FirstOrDefaultAsync();
+        return await FindAsync(t => t.Value == value && !t.Disabled && !t.Revoked);
     }
 
     public async Task UpdateAsRevokedAsync(Guid userId)
