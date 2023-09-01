@@ -171,7 +171,7 @@ public class AuthService : IAuthService
 
         if (user.TwoFactorAuth is { Enabled: true })
         {
-            var key = _keysManager.GenerateSha1Key();
+            var key = _keysManager.GenerateRandomBase32Key();
 
             user.TwoFactorAuth.Challenges.Add(new Challenge
             {
@@ -410,7 +410,7 @@ public class AuthService : IAuthService
         if (user.TwoFactorAuth is not null && user.TwoFactorAuth.Enabled)
             throw new AuthException(ErrorCode.AlreadyActivatedTwoFactorAuth);
 
-        var key = _keysManager.GenerateSha1Key();
+        var key = _keysManager.GenerateRandomBase32Key();
 
         if (user.TwoFactorAuth is null)
         {

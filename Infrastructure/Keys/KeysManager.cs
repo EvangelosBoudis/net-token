@@ -5,7 +5,7 @@ namespace Infrastructure.Keys;
 
 public class KeysManager : IKeysManager
 {
-    public string GenerateSha1Key()
+    public string GenerateRandomBase32Key()
     {
         var key = KeyGeneration.GenerateRandomKey(20);
         return Base32Encoding.ToString(key);
@@ -13,7 +13,7 @@ public class KeysManager : IKeysManager
 
     public string GenerateTotpCode()
     {
-        var key = GenerateSha1Key();
+        var key = GenerateRandomBase32Key();
         return GenerateTotpCode(key);
     }
 

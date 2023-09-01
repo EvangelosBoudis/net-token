@@ -2,7 +2,7 @@ namespace Application.Keys;
 
 public interface IKeysManager
 {
-    public string GenerateSha1Key();
+    public string GenerateRandomBase32Key();
 
     public string GenerateTotpCode();
 
