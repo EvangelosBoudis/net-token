@@ -13,9 +13,14 @@ public class KeysManager : IKeysManager
 
     public string GenerateTotpCode()
     {
-        var authKey = GenerateSha1Key();
-        var key = Base32Encoding.ToBytes(authKey);
-        return new Totp(key).ComputeTotp(DateTime.UtcNow);
+        var key = GenerateSha1Key();
+        return GenerateTotpCode(key);
+    }
+
+    public string GenerateTotpCode(string key)
+    {
+        var authKey = Base32Encoding.ToBytes(key);
+        return new Totp(authKey).ComputeTotp(DateTime.UtcNow);
     }
 
     public string GenerateTotpUri(string key, string email, string issuer)
