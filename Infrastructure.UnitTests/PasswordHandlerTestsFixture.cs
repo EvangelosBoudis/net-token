@@ -33,7 +33,11 @@ public partial class PasswordHandlerTests
         Assert.Multiple(() =>
         {
             Assert.That(encrypted, Is.Not.Null);
+
+            Assert.That(encrypted.Hash, Is.Not.Null);
             Assert.That(Sha512Regex().IsMatch(encrypted.Hash), Is.True);
+
+            Assert.That(encrypted.Salt, Is.Not.Null);
             Assert.That(HexadecimalRegex().IsMatch(encrypted.Salt), Is.True);
         });
     }
