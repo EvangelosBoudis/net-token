@@ -58,9 +58,15 @@ public class TokenProvider : ITokenProvider
 
     public TokenData GenerateToken(User user) => new(GenerateAccessToken(user), GenerateRefreshToken());
 
-    public string GetTokenSubject(string accessToken) => ValidateToken(accessToken).Subject;
+    public string GetTokenSubject(string accessToken) => ConvertToken(accessToken).Subject;
 
-    private JwtSecurityToken ValidateToken(string accessToken)
+    public bool ValidateToken(string accessToken)
+    {
+        ConvertToken(accessToken);
+        return true;
+    }
+
+    private JwtSecurityToken ConvertToken(string accessToken)
     {
         try
         {

@@ -12,4 +12,6 @@ public interface ITokenProvider
     TokenData GenerateToken(User user);
 
     string GetTokenSubject(string accessToken);
+
+    bool ValidateToken(string accessToken);
 }
