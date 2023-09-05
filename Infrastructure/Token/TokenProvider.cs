@@ -23,32 +23,7 @@ public class TokenProvider : ITokenProvider
         _securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SecretKey));
     }
 
-    public TokenData Generate(User user) => new(GenerateAccessToken(user), GenerateRefreshToken());
-
-    public Guid ExtractUserId(string accessToken)
-    {
-        try
-        {
-            var parameters = new TokenValidationParameters
-            {
-                ValidateLifetime = false,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = _options.Issuer,
-                ValidAudience = _options.Audience,
-                IssuerSigningKey = _securityKey,
-            };
-
-            new JwtSecurityTokenHandler().ValidateToken(accessToken, parameters, out var token);
-            var securityToken = (JwtSecurityToken)token;
-            return Guid.Parse(securityToken.Subject);
-        }
-        catch (Exception error) when (error is ArgumentException or SecurityTokenException)
-        {
-            throw new InvalidTokenException(accessToken);
-        }
-    }
-
-    private string GenerateAccessToken(User user)
+    public string GenerateAccessToken(User user)
     {
         var claims = new List<Claim>
         {
@@ -73,11 +48,39 @@ public class TokenProvider : ITokenProvider
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    private static string GenerateRefreshToken()
+    public string GenerateRefreshToken()
     {
         var random = new byte[64];
         using var generator = RandomNumberGenerator.Create();
         generator.GetBytes(random);
         return Convert.ToBase64String(random);
+    }
+
+    public TokenData GenerateToken(User user) => new(GenerateAccessToken(user), GenerateRefreshToken());
+
+    public string GetTokenSubject(string accessToken) => ValidateToken(accessToken).Subject;
+
+    private JwtSecurityToken ValidateToken(string accessToken)
+    {
+        try
+        {
+            var parameters = new TokenValidationParameters
+            {
+                ValidateLifetime = false,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = _options.Issuer,
+                ValidAudience = _options.Audience,
+                IssuerSigningKey = _securityKey,
+            };
+
+            var handler = new JwtSecurityTokenHandler();
+            handler.ValidateToken(accessToken, parameters, out var token);
+
+            return (JwtSecurityToken)token;
+        }
+        catch (Exception error) when (error is ArgumentException or SecurityTokenException)
+        {
+            throw new InvalidTokenException(accessToken);
+        }
     }
 }

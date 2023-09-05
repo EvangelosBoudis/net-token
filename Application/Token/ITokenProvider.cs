@@ -5,7 +5,11 @@ namespace Application.Token;
 
 public interface ITokenProvider
 {
-    TokenData Generate(User user);
+    string GenerateAccessToken(User user);
 
-    Guid ExtractUserId(string accessToken);
+    string GenerateRefreshToken();
+
+    TokenData GenerateToken(User user);
+
+    string GetTokenSubject(string accessToken);
 }
