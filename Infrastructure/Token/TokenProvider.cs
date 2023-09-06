@@ -25,11 +25,14 @@ public class TokenProvider : ITokenProvider
 
     public string GenerateAccessToken(User user)
     {
+        var now = DateTime.UtcNow;
+
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.UniqueName, user.Username),
             new(JwtRegisteredClaimNames.Email, user.Email),
+            new(JwtRegisteredClaimNames.Iat, $"{((DateTimeOffset)now).ToUnixTimeSeconds()}"),
             new(TokenClaimNames.PhoneNumber, user.PhoneNumber ?? string.Empty),
             new(TokenClaimNames.PhoneNumberVerified, user.PhoneNumberConfirmed.ToString().ToLower()),
             new(TokenClaimNames.TwoFactorEnabled, (user.TwoFactorAuth is { Enabled: true }).ToString().ToLower())
@@ -41,7 +44,7 @@ public class TokenProvider : ITokenProvider
             _options.Issuer,
             _options.Audience,
             claims,
-            DateTime.UtcNow,
+            now,
             DateTime.UtcNow.AddMinutes(_options.AccessExpirationInMinutes),
             signing);
 
