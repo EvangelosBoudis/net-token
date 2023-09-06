@@ -330,8 +330,8 @@ public class AuthService : IAuthService
 
     public async Task<TokenData> RefreshTokenAsync(TokenData token)
     {
-        var subject = _tokenProvider.GetTokenSubject(token.AccessToken);
-        var userId = Guid.Parse(subject);
+        var details = _tokenProvider.ReadToken(token.AccessToken);
+        var userId = Guid.Parse(details.Subject);
 
         User user;
         try

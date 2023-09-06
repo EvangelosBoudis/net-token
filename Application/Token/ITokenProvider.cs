@@ -1,3 +1,4 @@
+using Application.Token.Data;
 using Domain.Data;
 using Domain.Entities;
 
@@ -11,7 +12,5 @@ public interface ITokenProvider
 
     TokenData GenerateToken(User user);
 
-    string GetTokenSubject(string accessToken);
-
-    bool ValidateToken(string accessToken);
+    TokenDetails ReadToken(string accessToken);
 }

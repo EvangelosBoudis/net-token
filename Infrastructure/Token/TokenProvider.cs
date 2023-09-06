@@ -58,12 +58,24 @@ public class TokenProvider : ITokenProvider
 
     public TokenData GenerateToken(User user) => new(GenerateAccessToken(user), GenerateRefreshToken());
 
-    public string GetTokenSubject(string accessToken) => ConvertToken(accessToken).Subject;
-
-    public bool ValidateToken(string accessToken)
+    public TokenDetails ReadToken(string accessToken)
     {
-        ConvertToken(accessToken);
-        return true;
+        var token = ConvertToken(accessToken);
+        var claims = token.Claims.ToDictionary(c => c.Type, c => c.Value);
+
+        return new TokenDetails(
+            token.Subject,
+            token.Issuer,
+            token.IssuedAt,
+            token.Audiences.FirstOrDefault()!,
+            token.ValidFrom,
+            token.ValidTo,
+            token.SignatureAlgorithm,
+            claims[JwtRegisteredClaimNames.UniqueName],
+            claims[JwtRegisteredClaimNames.Email],
+            claims[TokenClaimNames.PhoneNumber],
+            bool.Parse(claims[TokenClaimNames.PhoneNumberVerified]),
+            bool.Parse(claims[TokenClaimNames.TwoFactorEnabled]));
     }
 
     private JwtSecurityToken ConvertToken(string accessToken)
