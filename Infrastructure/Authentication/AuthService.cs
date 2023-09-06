@@ -184,7 +184,7 @@ public class AuthService : IAuthService
             return new SignInResult(ChallengeKey: key, SignedIn: false);
         }
 
-        var token = _tokenProvider.GenerateToken(user);
+        var token = _tokenProvider.CreateToken(user);
 
         user.RefreshTokens.Add(new RefreshToken
         {
@@ -217,7 +217,7 @@ public class AuthService : IAuthService
 
         challenge.Redeemed = true;
 
-        var token = _tokenProvider.GenerateToken(challenge.TwoFactorAuth.User);
+        var token = _tokenProvider.CreateToken(challenge.TwoFactorAuth.User);
 
         challenge.TwoFactorAuth.User.RefreshTokens.Add(new RefreshToken
         {
@@ -330,7 +330,7 @@ public class AuthService : IAuthService
 
     public async Task<TokenData> RefreshTokenAsync(TokenData token)
     {
-        var details = _tokenProvider.ReadToken(token.AccessToken);
+        var details = _tokenProvider.ReadAccessToken(token.AccessToken);
         var userId = Guid.Parse(details.Subject);
 
         User user;
@@ -357,7 +357,7 @@ public class AuthService : IAuthService
 
         if (rt.ExpiredAt < DateTime.UtcNow) throw new AuthException(ErrorCode.ExpiredToken);
 
-        var nToken = _tokenProvider.GenerateToken(user);
+        var nToken = _tokenProvider.CreateToken(user);
 
         rt.Disabled = true;
 

@@ -6,11 +6,11 @@ namespace Application.Token;
 
 public interface ITokenProvider
 {
-    string GenerateAccessToken(User user);
+    string CreateAccessToken(User user);
 
-    string GenerateRefreshToken();
+    string CreateRefreshToken();
 
-    TokenData GenerateToken(User user);
+    TokenData CreateToken(User user);
 
-    TokenDetails ReadToken(string accessToken);
+    TokenDetails ReadAccessToken(string accessToken);
 }

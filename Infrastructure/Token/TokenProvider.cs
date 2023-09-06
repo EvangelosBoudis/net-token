@@ -23,7 +23,7 @@ public class TokenProvider : ITokenProvider
         _securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SecretKey));
     }
 
-    public string GenerateAccessToken(User user)
+    public string CreateAccessToken(User user)
     {
         var now = DateTime.UtcNow;
 
@@ -51,7 +51,7 @@ public class TokenProvider : ITokenProvider
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public string GenerateRefreshToken()
+    public string CreateRefreshToken()
     {
         var random = new byte[64];
         using var generator = RandomNumberGenerator.Create();
@@ -59,9 +59,9 @@ public class TokenProvider : ITokenProvider
         return Convert.ToBase64String(random);
     }
 
-    public TokenData GenerateToken(User user) => new(GenerateAccessToken(user), GenerateRefreshToken());
+    public TokenData CreateToken(User user) => new(CreateAccessToken(user), CreateRefreshToken());
 
-    public TokenDetails ReadToken(string accessToken)
+    public TokenDetails ReadAccessToken(string accessToken)
     {
         var token = ConvertToken(accessToken);
         var claims = token.Claims.ToDictionary(c => c.Type, c => c.Value);
