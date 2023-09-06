@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Application.Keys;
 using Infrastructure.Keys;
 
 namespace Infrastructure.UnitTests;
@@ -6,36 +7,34 @@ namespace Infrastructure.UnitTests;
 [TestFixture]
 public partial class KeysManagerTestsFixture
 {
-    private KeysManager keysManager;
-
-    [GeneratedRegex("^[A-Z2-7]+=*$")]
-    private static partial Regex Base64Regex();
-
-    [SetUp]
-    public void Setup()
-    {
-        keysManager = new KeysManager();
-    }
+    [GeneratedRegex("^(?:[A-Z2-7]+=*|=(?:3[TJKPSW]|4[FSY]|5[V]|6[BE]|7A)?=*$)$")]
+    private static partial Regex Base32Regex();
 
     [Test]
     public void GenerateRandomBase32Key_ReturnsValidKey()
     {
+        // Arrange
+        IKeysManager manager = new KeysManager();
+
         // Act
-        var key = keysManager.GenerateRandomBase32Key();
+        var key = manager.GenerateRandomBase32Key();
 
         // Assert
         Assert.Multiple(() =>
         {
             Assert.That(key, Is.Not.Null);
-            Assert.That(Base64Regex().IsMatch(key), Is.True);
+            Assert.That(Base32Regex().IsMatch(key), Is.True);
         });
     }
 
     [Test]
     public void GenerateTotpCode_ReturnsValidTotpCode()
     {
+        // Arrange
+        IKeysManager manager = new KeysManager();
+
         // Act
-        var code = keysManager.GenerateTotpCode();
+        var code = manager.GenerateTotpCode();
 
         // Assert
         Assert.Multiple(() =>
@@ -49,22 +48,21 @@ public partial class KeysManagerTestsFixture
     public void GenerateTotpUri_ReturnsValidTotpUri()
     {
         // Arrange
-        var key = keysManager.GenerateRandomBase32Key();
+        IKeysManager manager = new KeysManager();
+        var key = manager.GenerateRandomBase32Key();
         const string email = "john.deo@corp.com";
         const string issuer = "super-app";
 
         // Act
-        var uri = keysManager.GenerateTotpUri(key, email, issuer);
+        var uri = manager.GenerateTotpUri(key, email, issuer);
 
         // Assert
-        Assert.That(uri, Is.Not.Null);
-
         var isValid = Uri.TryCreate(uri, UriKind.Absolute, out var parsedUri);
         Assert.Multiple(() =>
         {
             Assert.That(isValid, Is.True);
-            Assert.That(parsedUri!.Scheme, Is.EqualTo("otpauth"));
-            Assert.That(parsedUri.Host, Is.EqualTo("totp"));
+            Assert.That(parsedUri?.Scheme, Is.EqualTo("otpauth"));
+            Assert.That(parsedUri?.Host, Is.EqualTo("totp"));
         });
     }
 
@@ -72,11 +70,12 @@ public partial class KeysManagerTestsFixture
     public void ValidateTotpCode_ValidCode_ReturnsTrue()
     {
         // Arrange
-        var key = keysManager.GenerateRandomBase32Key();
-        var code = keysManager.GenerateTotpCode(key);
+        IKeysManager manager = new KeysManager();
+        var key = manager.GenerateRandomBase32Key();
+        var code = manager.GenerateTotpCode(key);
 
         // Act
-        var isValid = keysManager.ValidateTotpCode(key, code);
+        var isValid = manager.ValidateTotpCode(key, code);
 
         // Assert
         Assert.That(isValid, Is.True);
@@ -86,8 +85,9 @@ public partial class KeysManagerTestsFixture
     public void ValidateTotpCode_InvalidCode_ReturnsFalse()
     {
         // Arrange
+        IKeysManager keysManager = new KeysManager();
         var key = keysManager.GenerateRandomBase32Key();
-        const string invalidCode = "123456"; // An invalid code
+        const string invalidCode = "123456";
 
         // Act
         var isValid = keysManager.ValidateTotpCode(key, invalidCode);

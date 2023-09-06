@@ -25,13 +25,10 @@ public partial class TokenProviderTestsFixture
     public void ReadAccessToken_InvalidAccessToken_ThrowsInvalidTokenException()
     {
         // Arrange
-
         var options = Options.Create(_util.TokenOptions);
-
         ITokenProvider provider = new TokenProvider(options);
 
         // Act & Assert
-
         Assert.Throws<InvalidTokenException>(() => provider.ReadAccessToken(_util.InvalidAccessToken));
     }
 
@@ -39,19 +36,14 @@ public partial class TokenProviderTestsFixture
     public void CreateAccessToken_ValidUser_ReturnsValidAccessToken()
     {
         // Arrange
-
         var options = Options.Create(_util.TokenOptions);
-
         ITokenProvider provider = new TokenProvider(options);
 
         // Act
-
         var accessToken = provider.CreateAccessToken(_util.User);
 
         // Assert
-
         var token = provider.ReadAccessToken(accessToken);
-
         Assert.Multiple(() =>
         {
             Assert.That(token.Subject, Is.EqualTo(_util.User.Id.ToString()));
@@ -71,17 +63,13 @@ public partial class TokenProviderTestsFixture
     public void CreateRefreshToken_ReturnsValidRefreshToken()
     {
         // Arrange
-
         var options = Options.Create(_util.TokenOptions);
-
         ITokenProvider provider = new TokenProvider(options);
 
         // Act
-
         var refreshToken = provider.CreateRefreshToken();
 
         // Assert
-
         Assert.That(Base64Regex().IsMatch(refreshToken), Is.True);
     }
 }

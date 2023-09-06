@@ -1,33 +1,27 @@
 using Infrastructure.Password;
 using System.Text.RegularExpressions;
+using Application.Password;
 
 namespace Infrastructure.UnitTests;
 
 [TestFixture]
 public partial class PasswordHandlerTests
 {
-    private PasswordHandler _handler;
-
     [GeneratedRegex("^[0-9a-fA-F]{128}$")]
     private static partial Regex Sha512Regex();
 
     [GeneratedRegex("^[0-9a-fA-F]+$")]
     private static partial Regex HexadecimalRegex();
 
-    [SetUp]
-    public void Setup()
-    {
-        _handler = new PasswordHandler();
-    }
-
     [Test]
     public void Encrypt_ValidPassword_ReturnsValidEncryptedPassword()
     {
         // Arrange
+        IPasswordHandler handler = new PasswordHandler();
         const string password = "secure-password";
 
         // Act
-        var encrypted = _handler.Encrypt(password);
+        var encrypted = handler.Encrypt(password);
 
         // Assert
         Assert.Multiple(() =>
@@ -46,11 +40,12 @@ public partial class PasswordHandlerTests
     public void Decrypt_CorrectPassword_ReturnsTrue()
     {
         // Arrange
+        IPasswordHandler handler = new PasswordHandler();
         const string password = "secure-password";
-        var encrypted = _handler.Encrypt(password);
+        var encrypted = handler.Encrypt(password);
 
         // Act
-        var isCorrect = _handler.Decrypt(password, encrypted.Hash, encrypted.Salt);
+        var isCorrect = handler.Decrypt(password, encrypted.Hash, encrypted.Salt);
 
         // Assert
         Assert.That(isCorrect, Is.True);
@@ -60,12 +55,13 @@ public partial class PasswordHandlerTests
     public void Decrypt_IncorrectPassword_ReturnsFalse()
     {
         // Arrange
+        IPasswordHandler handler = new PasswordHandler();
         const string password = "secure-password";
-        var encrypted = _handler.Encrypt(password);
+        var encrypted = handler.Encrypt(password);
         const string incorrect = "incorrect-password";
 
         // Act
-        var isCorrect = _handler.Decrypt(incorrect, encrypted.Hash, encrypted.Salt);
+        var isCorrect = handler.Decrypt(incorrect, encrypted.Hash, encrypted.Salt);
 
         // Assert
         Assert.That(isCorrect, Is.False);
