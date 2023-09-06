@@ -1,4 +1,4 @@
-namespace Infrastructure.UnitTests.Utils;
+namespace Infrastructure.XUnitTests.Utils;
 
 public record MockData(
     string Username,
