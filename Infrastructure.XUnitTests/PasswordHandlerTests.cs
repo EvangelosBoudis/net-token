@@ -1,12 +1,14 @@
 using System.Text.RegularExpressions;
-using Application.Password;
 using Infrastructure.Password;
+using Infrastructure.XUnitTests.Utils;
 
 namespace Infrastructure.XUnitTests;
 
 public partial class PasswordHandlerTests
 {
-    private readonly IPasswordHandler _handler = new PasswordHandler();
+    private readonly PasswordHandler _handler = new();
+
+    private readonly MockData _dataMock = new TestUtil().MockData;
 
     [GeneratedRegex("^[0-9a-fA-F]{128}$")]
     private static partial Regex Sha512Regex();
@@ -17,10 +19,13 @@ public partial class PasswordHandlerTests
     [Fact]
     public void Encrypt_ValidPassword_ReturnsValidEncryptedPassword()
     {
-        const string password = "comeIN123";
+        // Arrange
+        var password = _dataMock.User.Password;
 
+        // Act
         var encrypted = _handler.Encrypt(password);
 
+        // Assert
         Assert.NotNull(encrypted);
         Assert.NotNull(encrypted.Hash);
         Assert.Matches(Sha512Regex(), encrypted.Hash);
@@ -31,23 +36,29 @@ public partial class PasswordHandlerTests
     [Fact]
     public void Decrypt_CorrectPassword_ReturnsTrue()
     {
-        const string password = "comeIN123";
+        // Arrange
+        var password = _dataMock.User.Password;
         var encrypted = _handler.Encrypt(password);
 
+        // Act
         var isCorrect = _handler.Decrypt(password, encrypted.Hash, encrypted.Salt);
 
+        // Assert
         Assert.True(isCorrect);
     }
 
     [Fact]
     public void Decrypt_IncorrectPassword_ReturnsFalse()
     {
-        const string password = "comeIN123";
+        // Arrange
+        var password = _dataMock.User.Password;
         var encrypted = _handler.Encrypt(password);
-        const string incorrect = "comeIN123@@";
+        const string otherPassword = "comeIN123@@";
 
-        var isCorrect = _handler.Decrypt(incorrect, encrypted.Hash, encrypted.Salt);
+        // Act
+        var isCorrect = _handler.Decrypt(otherPassword, encrypted.Hash, encrypted.Salt);
 
+        // Assert
         Assert.False(isCorrect);
     }
 }
