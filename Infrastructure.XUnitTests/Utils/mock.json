@@ -1,14 +1,24 @@
 {
-  "username": "john",
-  "email": "john.doe@corp.com",
-  "phoneNumber": "6900000000",
-  "passwordHash": "7447F3F6CA003A9F4B03BF680ED5978677E34DF5FB0CB1ED0DF2AB2B4D23DF83D2E3800FF11F96C8D9190E302212371FD46573D4B6D2ED5D18C2A63CCC12A90D",
-  "passwordSalt": "7F93237F0FB6B136F55936F6822FE6F37EFF163BB46614C95632BF39A884B93A1103604941186F4ADC9084906EA46A2387C9A3B64FC4AF0BF02F8D11F1B6E8FD",
-  "authenticatorKey": "KFKSMW7IQVF5XBMYPS3PIMUTF2CCC6LL",
-  "invalidAccessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
-  "audience": "https://resource-server.com",
-  "issuer": "https://auth-server.com",
-  "secretKey": "PShiKyhhIyZuND0reClocmV2am1hbGc0MDcwMnFAemoxYj1xMXhyJC1xbnVubz1naCM=",
-  "accessExpirationInMinutes": 10,
-  "refreshExpirationInDays": 30
+  "user": {
+    "name": "john",
+    "email": "john.doe@corp.com",
+    "phone": "6900000000",
+    "hash": "7447F3F6CA003A9F4B03BF680ED5978677E34DF5FB0CB1ED0DF2AB2B4D23DF83D2E3800FF11F96C8D9190E302212371FD46573D4B6D2ED5D18C2A63CCC12A90D",
+    "salt": "7F93237F0FB6B136F55936F6822FE6F37EFF163BB46614C95632BF39A884B93A1103604941186F4ADC9084906EA46A2387C9A3B64FC4AF0BF02F8D11F1B6E8FD",
+    "authenticatorKey": "KFKSMW7IQVF5XBMYPS3PIMUTF2CCC6LL"
+  },
+  "mail": {
+    "host": "smtp.gmail.com",
+    "port": "587",
+    "username": "evangelos.boudis@gmail.com",
+    "password": "lpnhtdvddzpkrojk"
+  },
+  "token": {
+    "audience": "https://resource-server.com",
+    "issuer": "https://auth-server.com",
+    "secretKey": "PShiKyhhIyZuND0reClocmV2am1hbGc0MDcwMnFAemoxYj1xMXhyJC1xbnVubz1naCM=",
+    "accessExpirationInMinutes": 10,
+    "refreshExpirationInDays": 30
+  },
+  "invalidAccessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
 }

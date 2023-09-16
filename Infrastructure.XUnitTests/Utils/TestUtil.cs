@@ -7,9 +7,9 @@ namespace Infrastructure.XUnitTests.Utils;
 
 public class TestUtil
 {
-    public TokenOptions TokenOptions { get; }
-
     public User User { get; }
+
+    public TokenOptions TokenOptions { get; }
 
     public string InvalidAccessToken { get; }
 
@@ -21,34 +21,27 @@ public class TestUtil
 
         using var reader = new StreamReader(stream);
         var json = reader.ReadToEnd();
-        var mock = JsonConvert.DeserializeObject<MockData>(json)!;
-
-        TokenOptions = new TokenOptions
-        {
-            Audience = mock.Audience,
-            Issuer = mock.Issuer,
-            SecretKey = mock.SecretKey,
-            AccessExpirationInMinutes = mock.AccessExpirationInMinutes,
-            RefreshExpirationInDays = mock.RefreshExpirationInDays
-        };
+        var data = JsonConvert.DeserializeObject<MockData>(json)!;
 
         User = new User
         {
             Id = new Guid(),
-            Username = mock.Username,
-            Email = mock.Email,
-            PhoneNumber = mock.PhoneNumber,
+            Username = data.User.Name,
+            Email = data.User.Email,
+            PhoneNumber = data.User.Phone,
             PhoneNumberConfirmed = false,
             TwoFactorAuth = new TwoFactorAuth
             {
                 Enabled = false,
-                AuthenticatorKey = mock.AuthenticatorKey
+                AuthenticatorKey = data.User.AuthenticatorKey
             },
-            PasswordHash = mock.PasswordHash,
-            PasswordSalt = mock.PasswordSalt,
+            PasswordHash = data.User.Hash,
+            PasswordSalt = data.User.Salt,
             Account = new Account()
         };
 
-        InvalidAccessToken = mock.InvalidAccessToken;
+        TokenOptions = data.Token;
+
+        InvalidAccessToken = data.InvalidAccessToken;
     }
 }

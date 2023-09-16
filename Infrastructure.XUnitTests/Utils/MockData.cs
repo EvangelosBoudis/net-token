@@ -1,15 +1,8 @@
+using Application.Notification.Data;
+using Application.Token.Data;
+
 namespace Infrastructure.XUnitTests.Utils;
 
-public record MockData(
-    string Username,
-    string Email,
-    string PhoneNumber,
-    string PasswordHash,
-    string PasswordSalt,
-    string AuthenticatorKey,
-    string InvalidAccessToken,
-    string Audience,
-    string Issuer,
-    string SecretKey,
-    int AccessExpirationInMinutes,
-    int RefreshExpirationInDays);
+public record MockUser(string Name, string Email, string Phone, string Hash, string Salt, string AuthenticatorKey);
+
+public record MockData(MockUser User, MailOptions Mail, TokenOptions Token, string InvalidAccessToken);
