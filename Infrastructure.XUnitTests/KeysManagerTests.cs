@@ -32,7 +32,7 @@ public partial class KeysManagerTests
 
         // Assert
         Assert.NotNull(code);
-        Assert.True(code.Length is >= 6 and <= 8);
+        Assert.True(code.Content.Length is >= 6 and <= 8);
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public partial class KeysManagerTests
         var code = _manager.GenerateTotpCode(key);
 
         // Act
-        var isValid = _manager.ValidateTotpCode(key, code);
+        var isValid = _manager.ValidateTotpCode(key, code.Content);
 
         // Assert
         Assert.True(isValid);
