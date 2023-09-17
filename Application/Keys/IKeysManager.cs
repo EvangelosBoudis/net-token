@@ -1,12 +1,14 @@
+using Application.Keys.Data;
+
 namespace Application.Keys;
 
 public interface IKeysManager
 {
     public string GenerateRandomBase32Key();
 
-    public string GenerateTotpCode();
+    public TotpCode GenerateTotpCode();
 
-    public string GenerateTotpCode(string key);
+    public TotpCode GenerateTotpCode(string key);
 
     public string GenerateTotpUri(string key, string email, string issuer);
 

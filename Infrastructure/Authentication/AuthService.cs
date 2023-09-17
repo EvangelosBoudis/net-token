@@ -63,16 +63,16 @@ public class AuthService : IAuthService
             {
                 new()
                 {
-                    Code = code,
+                    Code = code.Content,
                     Type = OtpType.RegisterAccount,
-                    ExpiredAt = DateTime.UtcNow.AddMinutes(5)
+                    ExpiredAt = code.IssuedAt.AddMinutes(5)
                 }
             }
         });
 
         await _store.FlushAsync();
 
-        var email = new EmailDto(dto.Email, "Email Confirmation", code);
+        var email = new EmailDto(dto.Email, "Email Confirmation", code.Content);
         await _notificationSender.SendEmailAsync(email);
     }
 
@@ -130,14 +130,14 @@ public class AuthService : IAuthService
 
         user.OneTimePasswords.Add(new Otp
         {
-            Code = code,
+            Code = code.Content,
             Type = OtpType.RegisterAccount,
-            ExpiredAt = DateTime.UtcNow.AddMinutes(5)
+            ExpiredAt = code.IssuedAt.AddMinutes(5)
         });
 
         await _store.FlushAsync();
 
-        var email = new EmailDto(dto.Email, "Email Confirmation", code);
+        var email = new EmailDto(dto.Email, "Email Confirmation", code.Content);
         await _notificationSender.SendEmailAsync(email);
     }
 
@@ -251,14 +251,14 @@ public class AuthService : IAuthService
 
         user.OneTimePasswords.Add(new Otp
         {
-            Code = code,
+            Code = code.Content,
             Type = OtpType.ResetPassword,
-            ExpiredAt = DateTime.UtcNow.AddMinutes(5)
+            ExpiredAt = code.IssuedAt.AddMinutes(5)
         });
 
         await _store.FlushAsync();
 
-        var email = new EmailDto(dto.Email, "Email Confirmation", code);
+        var email = new EmailDto(dto.Email, "Email Confirmation", code.Content);
         await _notificationSender.SendEmailAsync(email);
     }
 

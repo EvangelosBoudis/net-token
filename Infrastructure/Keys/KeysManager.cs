@@ -1,4 +1,5 @@
 using Application.Keys;
+using Application.Keys.Data;
 using OtpNet;
 
 namespace Infrastructure.Keys;
@@ -11,16 +12,18 @@ public class KeysManager : IKeysManager
         return Base32Encoding.ToString(key);
     }
 
-    public string GenerateTotpCode()
+    public TotpCode GenerateTotpCode()
     {
         var key = GenerateRandomBase32Key();
         return GenerateTotpCode(key);
     }
 
-    public string GenerateTotpCode(string key)
+    public TotpCode GenerateTotpCode(string key)
     {
         var authKey = Base32Encoding.ToBytes(key);
-        return new Totp(authKey).ComputeTotp(DateTime.UtcNow);
+        var issuedAt = DateTime.UtcNow;
+        var code = new Totp(authKey).ComputeTotp(issuedAt);
+        return new TotpCode(code, issuedAt);
     }
 
     public string GenerateTotpUri(string key, string email, string issuer)
