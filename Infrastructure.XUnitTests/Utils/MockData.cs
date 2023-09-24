@@ -3,15 +3,15 @@ using Application.Token.Data;
 
 namespace Infrastructure.XUnitTests.Utils;
 
-public record MockUser(
+public record MockData(
     string Name,
     string Email,
     string Phone,
-    string Password,
     string Otp,
+    string Password,
     string Hash,
     string Salt,
     string AuthenticatorKey,
-    string InvalidAccessToken);
-
-public record MockData(MockUser User, MailOptions Mail, TokenOptions Token);
+    string InvalidAccessToken,
+    MailOptions Mail,
+    TokenOptions Token);

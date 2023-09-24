@@ -6,9 +6,9 @@ namespace Infrastructure.XUnitTests;
 
 public partial class KeysManagerTests
 {
-    private readonly KeysManager _manager = new();
+    private readonly TestUtil _util = new();
 
-    private readonly MockData _dataMock = new TestUtil().MockData;
+    private readonly KeysManager _manager = new();
 
     [GeneratedRegex("^(?:[A-Z2-7]+=*|=(?:3[TJKPSW]|4[FSY]|5[V]|6[BE]|7A)?=*$)$")]
     private static partial Regex Base32Regex();
@@ -39,8 +39,8 @@ public partial class KeysManagerTests
     public void GenerateTotpUri_ReturnsValidTotpUri()
     {
         // Arrange
-        var email = _dataMock.User.Email;
-        var issuer = _dataMock.Token.Issuer;
+        var email = _util.Email;
+        var issuer = _util.TokenOptions.Issuer;
         var key = _manager.GenerateRandomBase32Key();
 
         // Act
@@ -71,7 +71,7 @@ public partial class KeysManagerTests
     {
         // Arrange
         var key = _manager.GenerateRandomBase32Key();
-        var code = _dataMock.User.Otp;
+        var code = _util.Otp;
 
         // Act
         var isValid = _manager.ValidateTotpCode(key, code);

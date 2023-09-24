@@ -22,7 +22,7 @@ public class AuthServiceTests
 {
     private readonly AuthService _service;
 
-    private readonly MockData _dataMock;
+    private readonly TestUtil _util;
     private readonly Mock<IStore> _storeMock = new();
     private readonly Mock<IKeysManager> _keysManagerMock = new();
     private readonly Mock<ITokenProvider> _tokenProviderMock = new();
@@ -31,11 +31,12 @@ public class AuthServiceTests
 
     public AuthServiceTests()
     {
-        _dataMock = new TestUtil().MockData;
+        _util = new TestUtil();
 
+        var options = Options.Create(_util.TokenOptions);
         _service = new AuthService(
             _storeMock.Object,
-            Options.Create(_dataMock.Token),
+            options,
             _keysManagerMock.Object,
             _tokenProviderMock.Object,
             _passwordHandlerMock.Object,
@@ -46,41 +47,41 @@ public class AuthServiceTests
     public async Task SignUpAsync_UserAlreadyExists_ThrowsAuthException()
     {
         // Arrange
-        var dto = new SignUpDto(_dataMock.User.Email, _dataMock.User.Name, _dataMock.User.Password);
+        var dto = new SignUpDto(_util.Email, _util.Name, _util.Password);
 
         _storeMock
-            .Setup(mock => mock.Users.ExistsByUsernameOrEmailAsync(dto.Username, dto.Email))
+            .Setup(store => store.Users.ExistsByUsernameOrEmailAsync(dto.Username, dto.Email))
             .ReturnsAsync(true);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<AuthException>(() => _service.SignUpAsync(dto));
+        // Act and Assert
+        await Assert.ThrowsAsync<AuthException>(async () => await _service.SignUpAsync(dto));
     }
 
     [Fact]
-    public async Task SignUpAsync_UserDoesNotExist_SuccessfullyRegistersUser()
+    public async Task SignUpAsync_ValidInput_SuccessfullyRegistersUser()
     {
         // Arrange
-        var code = new TotpCode(_dataMock.User.Otp, DateTime.Now);
-        var dto = new SignUpDto(_dataMock.User.Email, _dataMock.User.Name, _dataMock.User.Password);
-        var encrypted = new EncryptedPassword(_dataMock.User.Hash, _dataMock.User.Salt);
+        var dto = new SignUpDto(_util.Email, _util.Name, _util.Password);
 
         _storeMock
-            .Setup(mock => mock.Users.ExistsByUsernameOrEmailAsync(dto.Username, dto.Email))
+            .Setup(store => store.Users.ExistsByUsernameOrEmailAsync(dto.Username, dto.Email))
             .ReturnsAsync(false);
 
+        var code = new TotpCode(_util.Otp, DateTime.UtcNow);
         _keysManagerMock
-            .Setup(mock => mock.GenerateTotpCode())
+            .Setup(manager => manager.GenerateTotpCode())
             .Returns(code);
 
+        var encrypted = new EncryptedPassword(_util.Hash, _util.Salt);
         _passwordHandlerMock
-            .Setup(mock => mock.Encrypt(dto.Password))
+            .Setup(handler => handler.Encrypt(dto.Password))
             .Returns(encrypted);
 
         // Act
         await _service.SignUpAsync(dto);
 
         // Assert
-        _storeMock.Verify(mock => mock.Users.SaveAsync(It.Is<User>(user =>
+        _storeMock.Verify(store => store.Users.SaveAsync(It.Is<User>(user =>
             user.Username == dto.Username &&
             user.Email == dto.Email &&
             user.PasswordHash == encrypted.Hash &&
@@ -91,9 +92,9 @@ public class AuthServiceTests
             user.OneTimePasswords.First().ExpiredAt == code.IssuedAt.AddMinutes(5))
         ), Times.Once);
 
-        _storeMock.Verify(mock => mock.FlushAsync(), Times.Once);
+        _storeMock.Verify(store => store.FlushAsync(), Times.Once);
 
-        _notificationSenderMock.Verify(mock => mock.SendEmailAsync(
+        _notificationSenderMock.Verify(sender => sender.SendEmailAsync(
             It.Is<EmailDto>(email =>
                 email.Receiver == dto.Email &&
                 email.Subject == "Email Confirmation" &&
@@ -105,93 +106,60 @@ public class AuthServiceTests
     public async Task ConfirmSignUpAsync_IncorrectEmail_ThrowsAuthException()
     {
         // Arrange
-        var dto = new ConfirmSignUpDto(_dataMock.User.Email, _dataMock.User.Otp);
+        var dto = new ConfirmSignUpDto(_util.Email, _util.Otp);
 
         _storeMock
-            .Setup(mock => mock.Users.FindByEmailAsync(dto.Email))
+            .Setup(store => store.Users.FindByEmailAsync(dto.Email))
             .Throws<EntityNotFoundException<User>>();
 
-        // Act & Assert
-        await Assert.ThrowsAsync<AuthException>(() => _service.ConfirmSignUpAsync(dto));
+        // Act and Assert
+        await Assert.ThrowsAsync<AuthException>(async () => await _service.ConfirmSignUpAsync(dto));
     }
 
     [Fact]
     public async Task ConfirmSignUpAsync_AlreadyConfirmedAccount_ThrowsAuthException()
     {
         // Arrange
-        var dto = new ConfirmSignUpDto(_dataMock.User.Email, _dataMock.User.Otp);
-
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Username = _dataMock.User.Name,
-            Email = dto.Email,
-            Account = new Account
-            {
-                Confirmed = true
-            },
-            PasswordHash = _dataMock.User.Hash,
-            PasswordSalt = _dataMock.User.Salt
-        };
+        var dto = new ConfirmSignUpDto(_util.Email, _util.Otp);
+        var user = _util.User;
+        user.Account.Confirmed = true;
 
         _storeMock
-            .Setup(mock => mock.Users.FindByEmailAsync(dto.Email))
+            .Setup(store => store.Users.FindByEmailAsync(dto.Email))
             .ReturnsAsync(user);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<AuthException>(() => _service.ConfirmSignUpAsync(dto));
+        // Act and Assert
+        await Assert.ThrowsAsync<AuthException>(async () => await _service.ConfirmSignUpAsync(dto));
     }
 
     [Fact]
     public async Task ConfirmSignUpAsync_IncorrectCode_ThrowsAuthException()
     {
         // Arrange
-        var dto = new ConfirmSignUpDto(_dataMock.User.Email, _dataMock.User.Otp);
-
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Username = _dataMock.User.Name,
-            Email = dto.Email,
-            Account = new Account
-            {
-                Confirmed = false
-            },
-            PasswordHash = _dataMock.User.Hash,
-            PasswordSalt = _dataMock.User.Salt
-        };
+        var dto = new ConfirmSignUpDto(_util.Email, _util.Otp);
+        var user = _util.User;
+        user.Account.Confirmed = false;
 
         _storeMock
-            .Setup(mock => mock.Users.FindByEmailAsync(dto.Email))
+            .Setup(store => store.Users.FindByEmailAsync(dto.Email))
             .ReturnsAsync(user);
 
         _storeMock
-            .Setup(mock =>
-                mock.Otp.FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount))
+            .Setup(store =>
+                store.Otp.FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount))
             .Throws<EntityNotFoundException<Otp>>();
 
-        // Act & Assert
-        await Assert.ThrowsAsync<AuthException>(() => _service.ConfirmSignUpAsync(dto));
+        // Act and Assert
+        await Assert.ThrowsAsync<AuthException>(async () => await _service.ConfirmSignUpAsync(dto));
     }
 
     [Fact]
     public async Task ConfirmSignUpAsync_ExpiredCode_ThrowsAuthException()
     {
         // Arrange
-        var dto = new ConfirmSignUpDto(_dataMock.User.Email, _dataMock.User.Otp);
-
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Username = _dataMock.User.Name,
-            Email = dto.Email,
-            Account = new Account
-            {
-                Confirmed = false
-            },
-            PasswordHash = _dataMock.User.Hash,
-            PasswordSalt = _dataMock.User.Salt
-        };
+        var dto = new ConfirmSignUpDto(_util.Email, _util.Otp);
+        var user = _util.User;
+        user.Account.Confirmed = false;
 
         var code = new Otp
         {
@@ -202,36 +170,25 @@ public class AuthServiceTests
         };
 
         _storeMock
-            .Setup(mock => mock.Users.FindByEmailAsync(dto.Email))
+            .Setup(store => store.Users.FindByEmailAsync(dto.Email))
             .ReturnsAsync(user);
 
         _storeMock
-            .Setup(mock =>
-                mock.Otp.FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount))
+            .Setup(store =>
+                store.Otp.FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount))
             .ReturnsAsync(code);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<AuthException>(() => _service.ConfirmSignUpAsync(dto));
+        // Act and Assert
+        await Assert.ThrowsAsync<AuthException>(async () => await _service.ConfirmSignUpAsync(dto));
     }
 
     [Fact]
-    public async Task ConfirmSignUpAsync_ValidInput_ConfirmsSignUp()
+    public async Task ConfirmSignUpAsync_ValidInput_SuccessfullyConfirmsSignUp()
     {
         // Arrange
-        var dto = new ConfirmSignUpDto(_dataMock.User.Email, _dataMock.User.Otp);
-
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Username = _dataMock.User.Name,
-            Email = dto.Email,
-            Account = new Account
-            {
-                Confirmed = false
-            },
-            PasswordHash = _dataMock.User.Hash,
-            PasswordSalt = _dataMock.User.Salt
-        };
+        var dto = new ConfirmSignUpDto(_util.Email, _util.Otp);
+        var user = _util.User;
+        user.Account.Confirmed = false;
 
         var code = new Otp
         {
@@ -242,12 +199,12 @@ public class AuthServiceTests
         };
 
         _storeMock
-            .Setup(mock => mock.Users.FindByEmailAsync(dto.Email))
+            .Setup(store => store.Users.FindByEmailAsync(dto.Email))
             .ReturnsAsync(user);
 
         _storeMock
-            .Setup(mock =>
-                mock.Otp.FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount))
+            .Setup(store =>
+                store.Otp.FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount))
             .ReturnsAsync(code);
 
         // Act
@@ -258,6 +215,76 @@ public class AuthServiceTests
         Assert.True(user.Account.Confirmed);
         Assert.True(code.Redeemed);
 
-        _storeMock.Verify(mock => mock.FlushAsync(), Times.Once);
+        _storeMock.Verify(store => store.FlushAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task ResendSignUpCodeAsync_IncorrectEmail_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new ResendSignUpCodeDto(_util.Email);
+
+        _storeMock
+            .Setup(store => store.Users.FindByEmailAsync(dto.Email))
+            .Throws(new EntityNotFoundException<User>());
+
+        // Act and Assert
+        await Assert.ThrowsAsync<AuthException>(async () => await _service.ResendSignUpCodeAsync(dto));
+    }
+
+    [Fact]
+    public async Task ResendSignUpCodeAsync_AlreadyConfirmedAccount_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new ResendSignUpCodeDto(_util.Email);
+        var user = _util.User;
+        user.Account.Confirmed = true;
+
+        _storeMock
+            .Setup(store => store.Users.FindByEmailAsync(dto.Email))
+            .ReturnsAsync(user);
+
+        // Act and Assert
+        await Assert.ThrowsAsync<AuthException>(async () => await _service.ResendSignUpCodeAsync(dto));
+    }
+
+    [Fact]
+    public async Task ResendSignUpCodeAsync_ValidInput_SuccessfullyResendsCodeAndEmail()
+    {
+        // Arrange
+        var dto = new ResendSignUpCodeDto(_util.Email);
+        var user = _util.User;
+        user.Account.Confirmed = false;
+
+        _storeMock
+            .Setup(store => store.Users.FindByEmailAsync(dto.Email))
+            .ReturnsAsync(user);
+
+        _storeMock
+            .Setup(store => store.Otp.UpdateAsDisabledActiveCodesAsync(user.Id, OtpType.RegisterAccount))
+            .Returns(Task.CompletedTask);
+
+        var code = new TotpCode(_util.Otp, DateTime.UtcNow);
+        _keysManagerMock
+            .Setup(manager => manager.GenerateTotpCode())
+            .Returns(code);
+
+        // Act
+        await _service.ResendSignUpCodeAsync(dto);
+
+        // Assert
+        Assert.Single(user.OneTimePasswords);
+        Assert.Equal(code.Content, user.OneTimePasswords.First().Code);
+        Assert.Equal(OtpType.RegisterAccount, user.OneTimePasswords.First().Type);
+        Assert.Equal(code.IssuedAt.AddMinutes(5), user.OneTimePasswords.First().ExpiredAt);
+
+        _storeMock.Verify(store => store.FlushAsync(), Times.Once);
+
+        _notificationSenderMock.Verify(sender => sender.SendEmailAsync(
+            It.Is<EmailDto>(email =>
+                email.Receiver == dto.Email &&
+                email.Subject == "Email Confirmation" &&
+                email.Content.Contains(code.Content))
+        ), Times.Once);
     }
 }

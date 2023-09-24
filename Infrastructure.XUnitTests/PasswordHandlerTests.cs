@@ -6,9 +6,9 @@ namespace Infrastructure.XUnitTests;
 
 public partial class PasswordHandlerTests
 {
-    private readonly PasswordHandler _handler = new();
+    private readonly TestUtil _util = new();
 
-    private readonly MockData _dataMock = new TestUtil().MockData;
+    private readonly PasswordHandler _handler = new();
 
     [GeneratedRegex("^[0-9a-fA-F]{128}$")]
     private static partial Regex Sha512Regex();
@@ -20,7 +20,7 @@ public partial class PasswordHandlerTests
     public void Encrypt_ValidPassword_ReturnsValidEncryptedPassword()
     {
         // Arrange
-        var password = _dataMock.User.Password;
+        var password = _util.Password;
 
         // Act
         var encrypted = _handler.Encrypt(password);
@@ -37,7 +37,7 @@ public partial class PasswordHandlerTests
     public void Decrypt_CorrectPassword_ReturnsTrue()
     {
         // Arrange
-        var password = _dataMock.User.Password;
+        var password = _util.Password;
         var encrypted = _handler.Encrypt(password);
 
         // Act
@@ -51,7 +51,7 @@ public partial class PasswordHandlerTests
     public void Decrypt_IncorrectPassword_ReturnsFalse()
     {
         // Arrange
-        var password = _dataMock.User.Password;
+        var password = _util.Password;
         var encrypted = _handler.Encrypt(password);
         const string otherPassword = "comeIN123@@";
 
