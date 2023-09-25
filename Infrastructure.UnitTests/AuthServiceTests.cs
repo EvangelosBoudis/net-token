@@ -58,6 +58,15 @@ public class AuthServiceTests
         // Act and Assert
         var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.SignUpAsync(dto));
         Assert.Equal(ErrorCode.InvalidUsernameOrEmail, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .ExistsByUsernameOrEmailAsync(dto.Username, dto.Email);
+
+        await _storeMock
+            .DidNotReceive()
+            .FlushAsync();
     }
 
     [Fact]
@@ -85,6 +94,19 @@ public class AuthServiceTests
         await _service.SignUpAsync(dto);
 
         // Assert
+        await _storeMock
+            .Users
+            .Received(1)
+            .ExistsByUsernameOrEmailAsync(dto.Username, dto.Email);
+
+        _keysManagerMock
+            .Received(1)
+            .GenerateTotpCode();
+
+        _passwordHandlerMock
+            .Received(1)
+            .Encrypt(dto.Password);
+
         await _storeMock
             .Users
             .Received(1)
@@ -126,6 +148,15 @@ public class AuthServiceTests
         // Act and Assert
         var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ConfirmSignUpAsync(dto));
         Assert.Equal(ErrorCode.IncorrectEmail, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .DidNotReceive()
+            .FlushAsync();
     }
 
     [Fact]
@@ -144,6 +175,15 @@ public class AuthServiceTests
         // Act and Assert
         var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ConfirmSignUpAsync(dto));
         Assert.Equal(ErrorCode.AlreadyConfirmedAccount, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .DidNotReceive()
+            .FlushAsync();
     }
 
     [Fact]
@@ -167,6 +207,20 @@ public class AuthServiceTests
         // Act and Assert
         var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ConfirmSignUpAsync(dto));
         Assert.Equal(ErrorCode.IncorrectCode, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .Otp
+            .Received(1)
+            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount);
+
+        await _storeMock
+            .DidNotReceive()
+            .FlushAsync();
     }
 
     [Fact]
@@ -197,6 +251,20 @@ public class AuthServiceTests
         // Act and Assert
         var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ConfirmSignUpAsync(dto));
         Assert.Equal(ErrorCode.ExpiredCode, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .Otp
+            .Received(1)
+            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount);
+
+        await _storeMock
+            .DidNotReceive()
+            .FlushAsync();
     }
 
     [Fact]
@@ -229,6 +297,16 @@ public class AuthServiceTests
         await _service.ConfirmSignUpAsync(dto);
 
         // Assert
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .Otp
+            .Received(1)
+            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount);
+
         Assert.True(user.EmailConfirmed);
         Assert.True(user.Account.Confirmed);
         Assert.True(code.Redeemed);
@@ -251,6 +329,15 @@ public class AuthServiceTests
         // Act and Assert
         var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ResendSignUpCodeAsync(dto));
         Assert.Equal(ErrorCode.IncorrectEmail, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .DidNotReceive()
+            .FlushAsync();
     }
 
     [Fact]
@@ -269,6 +356,15 @@ public class AuthServiceTests
         // Act and Assert
         var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ResendSignUpCodeAsync(dto));
         Assert.Equal(ErrorCode.AlreadyConfirmedAccount, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .DidNotReceive()
+            .FlushAsync();
     }
 
     [Fact]
@@ -302,6 +398,15 @@ public class AuthServiceTests
             .Users
             .Received(1)
             .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .Otp
+            .Received(1)
+            .UpdateAsDisabledActiveCodesAsync(user.Id, OtpType.RegisterAccount);
+
+        _keysManagerMock
+            .Received(1)
+            .GenerateTotpCode();
 
         Assert.Single(user.OneTimePasswords);
         Assert.Equal(code.Content, user.OneTimePasswords.First().Code);
