@@ -4,7 +4,7 @@ using Application.Token.Data;
 using Domain.Entities;
 using Newtonsoft.Json;
 
-namespace Infrastructure.XUnitTests.Utils;
+namespace Infrastructure.UnitTests.Utils;
 
 public class TestUtil
 {
@@ -35,7 +35,7 @@ public class TestUtil
     {
         var stream = Assembly
             .GetExecutingAssembly()
-            .GetManifestResourceStream("Infrastructure.XUnitTests.Utils.mock.json")!;
+            .GetManifestResourceStream("Infrastructure.UnitTests.Utils.mock.json")!;
 
         using var reader = new StreamReader(stream);
         var json = reader.ReadToEnd();

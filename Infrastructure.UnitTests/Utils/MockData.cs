@@ -1,7 +1,7 @@
 using Application.Notification.Data;
 using Application.Token.Data;
 
-namespace Infrastructure.XUnitTests.Utils;
+namespace Infrastructure.UnitTests.Utils;
 
 public record MockData(
     string Name,

@@ -1,10 +1,10 @@
 using System.Text.RegularExpressions;
 using Application.Token.Exceptions;
 using Infrastructure.Token;
-using Infrastructure.XUnitTests.Utils;
+using Infrastructure.UnitTests.Utils;
 using Microsoft.Extensions.Options;
 
-namespace Infrastructure.XUnitTests;
+namespace Infrastructure.UnitTests;
 
 public partial class TokenProviderTests
 {

@@ -12,11 +12,11 @@ using Domain.Entities;
 using Domain.Enums;
 using Domain.Exceptions;
 using Infrastructure.Authentication;
-using Infrastructure.XUnitTests.Utils;
+using Infrastructure.UnitTests.Utils;
 using Microsoft.Extensions.Options;
 using Moq;
 
-namespace Infrastructure.XUnitTests;
+namespace Infrastructure.UnitTests;
 
 public class AuthServiceTests
 {
@@ -273,6 +273,8 @@ public class AuthServiceTests
         await _service.ResendSignUpCodeAsync(dto);
 
         // Assert
+        _storeMock.Verify(store => store.Users.FindByEmailAsync(dto.Email), Times.Once);
+
         Assert.Single(user.OneTimePasswords);
         Assert.Equal(code.Content, user.OneTimePasswords.First().Code);
         Assert.Equal(OtpType.RegisterAccount, user.OneTimePasswords.First().Type);

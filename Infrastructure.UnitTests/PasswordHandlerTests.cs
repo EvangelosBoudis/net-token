@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
 using Infrastructure.Password;
-using Infrastructure.XUnitTests.Utils;
+using Infrastructure.UnitTests.Utils;
 
-namespace Infrastructure.XUnitTests;
+namespace Infrastructure.UnitTests;
 
 public partial class PasswordHandlerTests
 {
