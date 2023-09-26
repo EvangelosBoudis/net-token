@@ -425,4 +425,129 @@ public class AuthServiceTests
                     email.Subject == "Email Confirmation" &&
                     email.Content.Contains(code.Content)));
     }
+
+    [Fact]
+    public async Task SignInAsync_IncorrectEmail_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new SignInDto(_util.Email, _util.Password);
+
+        _storeMock
+            .Users.FindByEmailAsync(dto.Email)
+            .Throws<EntityNotFoundException<User>>();
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.SignInAsync(dto));
+        Assert.Equal(ErrorCode.IncorrectEmailOrPassword, ex.ErrorCode);
+
+        await _storeMock
+            .DidNotReceive()
+            .FlushAsync();
+    }
+
+    [Fact]
+    public async Task SignInAsync_UnconfirmedAccount_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new SignInDto(_util.Email, _util.Password);
+        var user = _util.User;
+        user.Account.Confirmed = false;
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.SignInAsync(dto));
+        Assert.Equal(ErrorCode.UnconfirmedAccount, ex.ErrorCode);
+
+        await _storeMock
+            .DidNotReceive()
+            .FlushAsync();
+    }
+
+    [Fact]
+    public async Task SignInAsync_AccountLocked_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new SignInDto(_util.Email, _util.Password);
+        var user = _util.User;
+        user.Account.Confirmed = true;
+        user.Account.Locked = true;
+        user.Account.LockEndAt = DateTime.UtcNow.AddSeconds(1); // account unlocks in 1 second
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.SignInAsync(dto));
+        Assert.Equal(ErrorCode.LockedAccount, ex.ErrorCode);
+
+        await _storeMock
+            .DidNotReceive()
+            .FlushAsync();
+    }
+
+    [Fact]
+    public async Task SignInAsync_IncorrectPassword_IncreaseFailedAttempts_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new SignInDto(_util.Email, _util.Password);
+        var user = _util.User;
+        user.Account.Confirmed = true;
+        user.Account.Locked = false;
+        user.Account.LockEndAt = null;
+        user.Account.FailedAccessAttempts = 1; // let's say that user already have one failed sign in attempt
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.SignInAsync(dto));
+        Assert.Equal(ErrorCode.IncorrectEmailOrPassword, ex.ErrorCode);
+
+        Assert.False(user.Account.Locked); // user is not locked
+        Assert.Null(user.Account.LockEndAt); // user does not have any lock end timestamp set up
+        Assert.Equal(2, user.Account.FailedAccessAttempts); // failed sign in attempts increased by one
+
+        await _storeMock
+            .Received(1)
+            .FlushAsync();
+    }
+
+    [Fact]
+    public async Task SignInAsync_FiveFailedAttempts_LockAccount_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new SignInDto(_util.Email, _util.Password);
+        var user = _util.User;
+        user.Account.Confirmed = true;
+        user.Account.Locked = false;
+        user.Account.LockEndAt = null;
+        user.Account.FailedAccessAttempts = 4; // let's say that user already have four failed sign in attempts
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.SignInAsync(dto));
+        Assert.Equal(ErrorCode.IncorrectEmailOrPassword, ex.ErrorCode);
+
+        Assert.True(user.Account.Locked); // user is locked
+        Assert.Equal(5, user.Account.FailedAccessAttempts); // failed sign in attempts increased by one
+
+        var lockMinutes = (user.Account.LockEndAt - DateTime.UtcNow)!.Value.Minutes;
+        Assert.True(lockMinutes is <= 5 and >= 4); // lock is between 4 to 5 minutes 
+
+        await _storeMock
+            .Received(1)
+            .FlushAsync();
+    }
 }
