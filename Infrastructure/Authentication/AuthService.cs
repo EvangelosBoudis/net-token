@@ -154,7 +154,7 @@ public class AuthService : IAuthService
         }
 
         if (!user.Account.Confirmed) throw new AuthException(ErrorCode.UnconfirmedAccount);
-        if (user.Account.Locked && user.Account.LockEndAt > DateTime.UtcNow)
+        if (user.Account.Locked && user.Account.LockEndAt >= DateTime.UtcNow)
             throw new AuthException(ErrorCode.LockedAccount);
 
         var matched = _passwordHandler.Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt);
