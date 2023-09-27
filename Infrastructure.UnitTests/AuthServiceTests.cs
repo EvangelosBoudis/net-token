@@ -8,6 +8,7 @@ using Application.Password;
 using Application.Password.Data;
 using Application.Store;
 using Application.Token;
+using Domain.Data;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Exceptions;
@@ -441,6 +442,15 @@ public class AuthServiceTests
         Assert.Equal(ErrorCode.IncorrectEmailOrPassword, ex.ErrorCode);
 
         await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        _passwordHandlerMock
+            .DidNotReceive()
+            .Decrypt(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+
+        await _storeMock
             .DidNotReceive()
             .FlushAsync();
     }
@@ -461,6 +471,15 @@ public class AuthServiceTests
         // Act and Assert
         var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.SignInAsync(dto));
         Assert.Equal(ErrorCode.UnconfirmedAccount, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        _passwordHandlerMock
+            .DidNotReceive()
+            .Decrypt(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
 
         await _storeMock
             .DidNotReceive()
@@ -487,6 +506,15 @@ public class AuthServiceTests
         Assert.Equal(ErrorCode.LockedAccount, ex.ErrorCode);
 
         await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        _passwordHandlerMock
+            .DidNotReceive()
+            .Decrypt(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+
+        await _storeMock
             .DidNotReceive()
             .FlushAsync();
     }
@@ -507,6 +535,10 @@ public class AuthServiceTests
             .FindByEmailAsync(dto.Email)
             .Returns(user);
 
+        _passwordHandlerMock
+            .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt)
+            .Returns(false);
+
         // Act and Assert
         var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.SignInAsync(dto));
         Assert.Equal(ErrorCode.IncorrectEmailOrPassword, ex.ErrorCode);
@@ -514,6 +546,15 @@ public class AuthServiceTests
         Assert.False(user.Account.Locked); // user is not locked
         Assert.Null(user.Account.LockEndAt); // user does not have any lock end timestamp set up
         Assert.Equal(2, user.Account.FailedAccessAttempts); // failed sign in attempts increased by one
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        _passwordHandlerMock
+            .Received(1)
+            .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt);
 
         await _storeMock
             .Received(1)
@@ -536,6 +577,10 @@ public class AuthServiceTests
             .FindByEmailAsync(dto.Email)
             .Returns(user);
 
+        _passwordHandlerMock
+            .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt)
+            .Returns(false);
+
         // Act and Assert
         var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.SignInAsync(dto));
         Assert.Equal(ErrorCode.IncorrectEmailOrPassword, ex.ErrorCode);
@@ -544,7 +589,134 @@ public class AuthServiceTests
         Assert.Equal(5, user.Account.FailedAccessAttempts); // failed sign in attempts increased by one
 
         var lockMinutes = (user.Account.LockEndAt - DateTime.UtcNow)!.Value.Minutes;
-        Assert.True(lockMinutes is <= 5 and >= 4); // lock is between 4 to 5 minutes 
+        Assert.InRange(lockMinutes, 4, 5); // lock is between 4 to 5 minutes
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        _passwordHandlerMock
+            .Received(1)
+            .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt);
+
+        await _storeMock
+            .Received(1)
+            .FlushAsync();
+    }
+
+    [Fact]
+    public async Task SignInAsync_ValidInput_TwoFactorAuthEnabled_ReturnsChallengeKey()
+    {
+        // Arrange
+        var dto = new SignInDto(_util.Email, _util.Password);
+        var user = _util.User;
+        user.Account.Confirmed = true; // account is confirmed
+        user.TwoFactorAuth!.Enabled = true; // 2fa is enabled
+        user.Account.Locked = true; // user was previously locked
+        user.Account.LockEndAt = DateTime.UtcNow; // but user lock expired
+        user.Account.FailedAccessAttempts = 5;
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Returns(user);
+
+        _passwordHandlerMock
+            .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt)
+            .Returns(true);
+
+        var key = _util.AuthenticatorKey;
+        _keysManagerMock
+            .GenerateRandomBase32Key()
+            .Returns(key);
+
+        // Act
+        var result = await _service.SignInAsync(dto);
+
+        // Assert
+        Assert.False(user.Account.Locked);
+        Assert.Null(user.Account.LockEndAt);
+        Assert.Equal(0, user.Account.FailedAccessAttempts);
+        Assert.Equal(1, user.TwoFactorAuth.Challenges.Count);
+        Assert.Equal(key, user.TwoFactorAuth.Challenges.First().Key);
+
+        var lockMinutes = (user.TwoFactorAuth.Challenges.First().ExpiredAt - DateTime.UtcNow).Minutes;
+        Assert.InRange(lockMinutes, 1, 2); // key is valid between 1 to 2 minutes
+
+        Assert.Null(result.Token);
+        Assert.False(result.SignedIn);
+        Assert.Equal(key, result.ChallengeKey);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        _passwordHandlerMock
+            .Received(1)
+            .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt);
+
+        _keysManagerMock
+            .Received(1)
+            .GenerateRandomBase32Key();
+
+        await _storeMock
+            .Received(1)
+            .FlushAsync();
+    }
+
+    [Fact]
+    public async Task SignInAsync_ValidInput_SuccessfullySignIn()
+    {
+        // Arrange
+        var dto = new SignInDto(_util.Email, _util.Password);
+        var user = _util.User;
+        user.Account.Confirmed = true;
+        user.TwoFactorAuth!.Enabled = false;
+        user.Account.Locked = true;
+        user.Account.LockEndAt = null;
+        user.Account.FailedAccessAttempts = 0;
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Returns(user);
+
+        _passwordHandlerMock
+            .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt)
+            .Returns(true);
+
+        var token = new TokenData(string.Empty, string.Empty);
+        _tokenProviderMock
+            .CreateToken(user)
+            .Returns(token);
+
+        // Act
+        var result = await _service.SignInAsync(dto);
+
+        // Assert
+        Assert.False(user.Account.Locked);
+        Assert.Null(user.Account.LockEndAt);
+        Assert.Equal(0, user.Account.FailedAccessAttempts);
+        Assert.Equal(0, user.TwoFactorAuth.Challenges.Count);
+
+        Assert.Equal(token, result.Token);
+        Assert.True(result.SignedIn);
+        Assert.Null(result.ChallengeKey);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        _passwordHandlerMock
+            .Received(1)
+            .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt);
+
+        _tokenProviderMock
+            .Received(1)
+            .CreateToken(user);
 
         await _storeMock
             .Received(1)
