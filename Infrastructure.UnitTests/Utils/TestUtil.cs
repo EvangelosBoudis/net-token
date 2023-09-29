@@ -31,6 +31,8 @@ public class TestUtil
 
     public User User { get; }
 
+    public Challenge Challenge { get; }
+
     public TestUtil()
     {
         var stream = Assembly
@@ -53,19 +55,30 @@ public class TestUtil
         MailOptions = data.Mail;
         TokenOptions = data.Token;
 
+        var auth = new TwoFactorAuth
+        {
+            AuthenticatorKey = data.AuthenticatorKey
+        };
+
         User = new User
         {
             Id = new Guid(),
             Username = data.Name,
             Email = data.Email,
             PhoneNumber = data.Phone,
-            TwoFactorAuth = new TwoFactorAuth
-            {
-                AuthenticatorKey = data.AuthenticatorKey
-            },
+            TwoFactorAuth = auth,
             PasswordHash = data.Hash,
             PasswordSalt = data.Salt,
             Account = new Account()
+        };
+
+        auth.User = User;
+
+        Challenge = new Challenge
+        {
+            Key = data.AuthenticatorKey,
+            ExpiredAt = DateTime.UtcNow,
+            TwoFactorAuth = auth
         };
     }
 }
