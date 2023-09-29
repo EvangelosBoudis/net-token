@@ -209,6 +209,7 @@ public class AuthService : IAuthService
             throw new AuthException(ErrorCode.IncorrectKey);
         }
 
+        if (challenge.Redeemed) throw new AuthException(ErrorCode.IncorrectKey);
         if (challenge.ExpiredAt < DateTime.UtcNow) throw new AuthException(ErrorCode.ExpiredKey);
         if (challenge.TwoFactorAuth.User.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
 
