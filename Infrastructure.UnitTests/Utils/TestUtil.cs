@@ -69,7 +69,8 @@ public class TestUtil
             TwoFactorAuth = auth,
             PasswordHash = data.Hash,
             PasswordSalt = data.Salt,
-            Account = new Account()
+            Account = new Account(),
+            RefreshTokens = new List<RefreshToken>()
         };
 
         auth.User = User;

@@ -847,4 +847,63 @@ public class AuthServiceTests
             .Received(1)
             .ValidateTotpCode(challenge.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode);
     }
+
+    [Fact]
+    public async Task TwoFactorSignAsync_ValidInput_SuccessfullySignIn()
+    {
+        // Arrange
+        var dto = new TwoFactorSignInDto(_util.AuthenticatorKey, _util.Otp);
+        var challenge = _util.Challenge;
+        challenge.TwoFactorAuth.User.Account.Locked = false;
+        challenge.Redeemed = false;
+        challenge.ExpiredAt = DateTime.UtcNow.AddMinutes(1);
+        var expirationInDays = _util.TokenOptions.RefreshExpirationInDays;
+
+        _storeMock
+            .Challenges
+            .FindByKeyAsync(dto.ChallengeKey)
+            .Returns(challenge);
+
+        _keysManagerMock
+            .ValidateTotpCode(challenge.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode)
+            .Returns(true);
+
+        var token = new TokenData(string.Empty, string.Empty);
+        _tokenProviderMock
+            .CreateToken(challenge.TwoFactorAuth.User)
+            .Returns(token);
+
+        // Act
+        var result = await _service.TwoFactorSignAsync(dto);
+
+        // Assert
+        Assert.True(result.SignedIn);
+        Assert.True(challenge.Redeemed);
+        Assert.Equal(1, challenge.TwoFactorAuth.User.RefreshTokens.Count);
+
+        var refreshToken = challenge.TwoFactorAuth.User.RefreshTokens.First();
+        Assert.Equal(token.RefreshToken, refreshToken.Value);
+        Assert.Equal(token.RefreshToken, result.Token!.RefreshToken);
+        Assert.Equal(token.AccessToken, result.Token!.AccessToken);
+
+        var validDays = (refreshToken.ExpiredAt - DateTime.UtcNow).Days;
+        Assert.InRange(validDays, expirationInDays - 1, expirationInDays);
+
+        await _storeMock
+            .Challenges
+            .Received(1)
+            .FindByKeyAsync(dto.ChallengeKey);
+
+        _keysManagerMock
+            .Received(1)
+            .ValidateTotpCode(challenge.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode);
+
+        _tokenProviderMock
+            .Received(1)
+            .CreateToken(challenge.TwoFactorAuth.User);
+
+        await _storeMock
+            .Received(1)
+            .FlushAsync();
+    }
 }
