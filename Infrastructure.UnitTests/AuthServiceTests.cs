@@ -722,4 +722,129 @@ public class AuthServiceTests
             .Received(1)
             .FlushAsync();
     }
+
+    [Fact]
+    public async Task TwoFactorSignAsync_IncorrectKey_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new TwoFactorSignInDto(_util.AuthenticatorKey, _util.Otp);
+
+        _storeMock
+            .Challenges
+            .FindByKeyAsync(dto.ChallengeKey)
+            .Throws<EntityNotFoundException<Challenge>>();
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.TwoFactorSignAsync(dto));
+        Assert.Equal(ErrorCode.IncorrectKey, ex.ErrorCode);
+
+        await _storeMock
+            .Challenges
+            .Received(1)
+            .FindByKeyAsync(dto.ChallengeKey);
+    }
+
+    [Fact]
+    public async Task TwoFactorSignAsync_RedeemedKey_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new TwoFactorSignInDto(_util.AuthenticatorKey, _util.Otp);
+        var challenge = _util.Challenge;
+        challenge.Redeemed = true;
+
+        _storeMock
+            .Challenges
+            .FindByKeyAsync(dto.ChallengeKey)
+            .Returns(challenge);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.TwoFactorSignAsync(dto));
+        Assert.Equal(ErrorCode.IncorrectKey, ex.ErrorCode);
+
+        await _storeMock
+            .Challenges
+            .Received(1)
+            .FindByKeyAsync(dto.ChallengeKey);
+    }
+
+    [Fact]
+    public async Task TwoFactorSignAsync_ExpiredKey_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new TwoFactorSignInDto(_util.AuthenticatorKey, _util.Otp);
+        var challenge = _util.Challenge;
+        challenge.ExpiredAt = DateTime.UtcNow;
+
+        _storeMock
+            .Challenges
+            .FindByKeyAsync(dto.ChallengeKey)
+            .Returns(challenge);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.TwoFactorSignAsync(dto));
+        Assert.Equal(ErrorCode.ExpiredKey, ex.ErrorCode);
+
+        await _storeMock
+            .Challenges
+            .Received(1)
+            .FindByKeyAsync(dto.ChallengeKey);
+    }
+
+    [Fact]
+    public async Task TwoFactorSignAsync_LockedAccount_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new TwoFactorSignInDto(_util.AuthenticatorKey, _util.Otp);
+        var challenge = _util.Challenge;
+        challenge.TwoFactorAuth.User.Account.Locked = true;
+        challenge.Redeemed = false;
+        challenge.ExpiredAt = DateTime.UtcNow.AddMinutes(1);
+
+        _storeMock
+            .Challenges
+            .FindByKeyAsync(dto.ChallengeKey)
+            .Returns(challenge);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.TwoFactorSignAsync(dto));
+        Assert.Equal(ErrorCode.LockedAccount, ex.ErrorCode);
+
+        await _storeMock
+            .Challenges
+            .Received(1)
+            .FindByKeyAsync(dto.ChallengeKey);
+    }
+
+    [Fact]
+    public async Task TwoFactorSignAsync_IncorrectCode_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new TwoFactorSignInDto(_util.AuthenticatorKey, _util.Otp);
+        var challenge = _util.Challenge;
+        challenge.TwoFactorAuth.User.Account.Locked = false;
+        challenge.Redeemed = false;
+        challenge.ExpiredAt = DateTime.UtcNow.AddMinutes(1);
+
+        _storeMock
+            .Challenges
+            .FindByKeyAsync(dto.ChallengeKey)
+            .Returns(challenge);
+
+        _keysManagerMock
+            .ValidateTotpCode(challenge.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode)
+            .Returns(false);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.TwoFactorSignAsync(dto));
+        Assert.Equal(ErrorCode.IncorrectCode, ex.ErrorCode);
+
+        await _storeMock
+            .Challenges
+            .Received(1)
+            .FindByKeyAsync(dto.ChallengeKey);
+
+        _keysManagerMock
+            .Received(1)
+            .ValidateTotpCode(challenge.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode);
+    }
 }
