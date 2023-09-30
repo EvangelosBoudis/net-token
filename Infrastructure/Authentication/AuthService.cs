@@ -52,23 +52,25 @@ public class AuthService : IAuthService
         var code = _keysManager.GenerateTotpCode();
         var encrypted = _passwordHandler.Encrypt(dto.Password);
 
-        await _store.Users.SaveAsync(new User
-        {
-            Username = dto.Username,
-            Email = dto.Email,
-            PasswordHash = encrypted.Hash,
-            PasswordSalt = encrypted.Salt,
-            Account = new Account(),
-            OneTimePasswords = new List<Otp>
+        await _store
+            .Users
+            .SaveAsync(new User
             {
-                new()
+                Username = dto.Username,
+                Email = dto.Email,
+                PasswordHash = encrypted.Hash,
+                PasswordSalt = encrypted.Salt,
+                Account = new Account(),
+                OneTimePasswords = new List<Otp>
                 {
-                    Code = code.Content,
-                    Type = OtpType.RegisterAccount,
-                    ExpiredAt = code.IssuedAt.AddMinutes(5)
+                    new()
+                    {
+                        Code = code.Content,
+                        Type = OtpType.RegisterAccount,
+                        ExpiredAt = code.IssuedAt.AddMinutes(5)
+                    }
                 }
-            }
-        });
+            });
 
         await _store.FlushAsync();
 
@@ -81,7 +83,9 @@ public class AuthService : IAuthService
         User user;
         try
         {
-            user = await _store.Users.FindByEmailAsync(dto.Email);
+            user = await _store
+                .Users
+                .FindByEmailAsync(dto.Email);
         }
         catch (EntityNotFoundException<User>)
         {
@@ -93,8 +97,9 @@ public class AuthService : IAuthService
         Otp code;
         try
         {
-            code = await _store.Otp.FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode,
-                OtpType.RegisterAccount);
+            code = await _store
+                .Otp
+                .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount);
         }
         catch (EntityNotFoundException<Otp>)
         {
@@ -115,7 +120,9 @@ public class AuthService : IAuthService
         User user;
         try
         {
-            user = await _store.Users.FindByEmailAsync(dto.Email);
+            user = await _store
+                .Users
+                .FindByEmailAsync(dto.Email);
         }
         catch (EntityNotFoundException<User>)
         {
@@ -124,16 +131,20 @@ public class AuthService : IAuthService
 
         if (user.Account.Confirmed) throw new AuthException(ErrorCode.AlreadyConfirmedAccount);
 
-        await _store.Otp.UpdateAsDisabledActiveCodesAsync(user.Id, OtpType.RegisterAccount);
+        await _store
+            .Otp
+            .UpdateAsDisabledActiveCodesAsync(user.Id, OtpType.RegisterAccount);
 
         var code = _keysManager.GenerateTotpCode();
 
-        user.OneTimePasswords.Add(new Otp
-        {
-            Code = code.Content,
-            Type = OtpType.RegisterAccount,
-            ExpiredAt = code.IssuedAt.AddMinutes(5)
-        });
+        user
+            .OneTimePasswords
+            .Add(new Otp
+            {
+                Code = code.Content,
+                Type = OtpType.RegisterAccount,
+                ExpiredAt = code.IssuedAt.AddMinutes(5)
+            });
 
         await _store.FlushAsync();
 
@@ -146,7 +157,9 @@ public class AuthService : IAuthService
         User user;
         try
         {
-            user = await _store.Users.FindByEmailAsync(dto.Email);
+            user = await _store
+                .Users
+                .FindByEmailAsync(dto.Email);
         }
         catch (EntityNotFoundException<User>)
         {
@@ -173,11 +186,14 @@ public class AuthService : IAuthService
         {
             var key = _keysManager.GenerateRandomBase32Key();
 
-            user.TwoFactorAuth.Challenges.Add(new Challenge
-            {
-                Key = key,
-                ExpiredAt = DateTime.UtcNow.AddMinutes(2)
-            });
+            user
+                .TwoFactorAuth
+                .Challenges
+                .Add(new Challenge
+                {
+                    Key = key,
+                    ExpiredAt = DateTime.UtcNow.AddMinutes(2)
+                });
 
             await _store.FlushAsync();
 
@@ -186,11 +202,13 @@ public class AuthService : IAuthService
 
         var token = _tokenProvider.CreateToken(user);
 
-        user.RefreshTokens.Add(new RefreshToken
-        {
-            Value = token.RefreshToken,
-            ExpiredAt = DateTime.UtcNow.AddDays(_options.RefreshExpirationInDays)
-        });
+        user
+            .RefreshTokens
+            .Add(new RefreshToken
+            {
+                Value = token.RefreshToken,
+                ExpiredAt = DateTime.UtcNow.AddDays(_options.RefreshExpirationInDays)
+            });
 
         await _store.FlushAsync();
 
@@ -202,7 +220,9 @@ public class AuthService : IAuthService
         Challenge challenge;
         try
         {
-            challenge = await _store.Challenges.FindByKeyAsync(dto.ChallengeKey);
+            challenge = await _store
+                .Challenges
+                .FindByKeyAsync(dto.ChallengeKey);
         }
         catch (EntityNotFoundException<Challenge>)
         {
@@ -220,11 +240,14 @@ public class AuthService : IAuthService
 
         var token = _tokenProvider.CreateToken(challenge.TwoFactorAuth.User);
 
-        challenge.TwoFactorAuth.User.RefreshTokens.Add(new RefreshToken
-        {
-            Value = token.RefreshToken,
-            ExpiredAt = DateTime.UtcNow.AddDays(_options.RefreshExpirationInDays)
-        });
+        challenge
+            .TwoFactorAuth
+            .User
+            .RefreshTokens.Add(new RefreshToken
+            {
+                Value = token.RefreshToken,
+                ExpiredAt = DateTime.UtcNow.AddDays(_options.RefreshExpirationInDays)
+            });
 
         await _store.FlushAsync();
 
@@ -236,7 +259,9 @@ public class AuthService : IAuthService
         User user;
         try
         {
-            user = await _store.Users.FindByEmailAsync(dto.Email);
+            user = await _store
+                .Users
+                .FindByEmailAsync(dto.Email);
         }
         catch (EntityNotFoundException<User>)
         {
@@ -246,16 +271,20 @@ public class AuthService : IAuthService
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
         if (!user.Account.Confirmed) throw new AuthException(ErrorCode.UnconfirmedAccount);
 
-        await _store.Otp.UpdateAsDisabledActiveCodesAsync(user.Id, OtpType.ResetPassword);
+        await _store
+            .Otp
+            .UpdateAsDisabledActiveCodesAsync(user.Id, OtpType.ResetPassword);
 
         var code = _keysManager.GenerateTotpCode();
 
-        user.OneTimePasswords.Add(new Otp
-        {
-            Code = code.Content,
-            Type = OtpType.ResetPassword,
-            ExpiredAt = code.IssuedAt.AddMinutes(5)
-        });
+        user
+            .OneTimePasswords
+            .Add(new Otp
+            {
+                Code = code.Content,
+                Type = OtpType.ResetPassword,
+                ExpiredAt = code.IssuedAt.AddMinutes(5)
+            });
 
         await _store.FlushAsync();
 
@@ -268,7 +297,9 @@ public class AuthService : IAuthService
         User user;
         try
         {
-            user = await _store.Users.FindByEmailAsync(dto.Email);
+            user = await _store
+                .Users
+                .FindByEmailAsync(dto.Email);
         }
         catch (EntityNotFoundException<User>)
         {
@@ -281,7 +312,9 @@ public class AuthService : IAuthService
         Otp code;
         try
         {
-            code = await _store.Otp.FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
+            code = await _store
+                .Otp
+                .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
         }
         catch (EntityNotFoundException<Otp>)
         {
@@ -304,7 +337,9 @@ public class AuthService : IAuthService
         User user;
         try
         {
-            user = await _store.Users.FindByIdAsync(auth.Id);
+            user = await _store
+                .Users
+                .FindByIdAsync(auth.Id);
         }
         catch (EntityNotFoundException<User>)
         {
@@ -337,7 +372,9 @@ public class AuthService : IAuthService
         User user;
         try
         {
-            user = await _store.Users.FindByIdAsync(userId);
+            user = await _store
+                .Users
+                .FindByIdAsync(userId);
         }
         catch (EntityNotFoundException<User>)
         {
@@ -349,7 +386,9 @@ public class AuthService : IAuthService
         RefreshToken rt;
         try
         {
-            rt = await _store.RefreshTokens.FindActiveByValueAsync(token.RefreshToken);
+            rt = await _store
+                .RefreshTokens
+                .FindActiveByValueAsync(token.RefreshToken);
         }
         catch (EntityNotFoundException<RefreshToken>)
         {
@@ -362,11 +401,13 @@ public class AuthService : IAuthService
 
         rt.Disabled = true;
 
-        user.RefreshTokens.Add(new RefreshToken
-        {
-            Value = nToken.RefreshToken,
-            ExpiredAt = rt.ExpiredAt
-        });
+        user
+            .RefreshTokens
+            .Add(new RefreshToken
+            {
+                Value = nToken.RefreshToken,
+                ExpiredAt = rt.ExpiredAt
+            });
 
         await _store.FlushAsync();
 
@@ -401,7 +442,9 @@ public class AuthService : IAuthService
         User user;
         try
         {
-            user = await _store.Users.FindByIdAsync(auth.Id);
+            user = await _store
+                .Users
+                .FindByIdAsync(auth.Id);
         }
         catch (EntityNotFoundException<User>)
         {
@@ -446,7 +489,9 @@ public class AuthService : IAuthService
         User user;
         try
         {
-            user = await _store.Users.FindByIdAsync(auth.Id);
+            user = await _store
+                .Users
+                .FindByIdAsync(auth.Id);
         }
         catch (EntityNotFoundException<User>)
         {
@@ -478,7 +523,9 @@ public class AuthService : IAuthService
         User user;
         try
         {
-            user = await _store.Users.FindByIdAsync(auth.Id);
+            user = await _store
+                .Users
+                .FindByIdAsync(auth.Id);
         }
         catch (EntityNotFoundException<User>)
         {
