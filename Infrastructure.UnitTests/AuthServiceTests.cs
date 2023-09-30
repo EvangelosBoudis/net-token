@@ -8,6 +8,7 @@ using Application.Password;
 using Application.Password.Data;
 using Application.Store;
 using Application.Token;
+using Application.Token.Exceptions;
 using Domain.Data;
 using Domain.Entities;
 using Domain.Enums;
@@ -202,7 +203,7 @@ public class AuthServiceTests
 
         _storeMock
             .Otp
-            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount)
+            .FindActiveByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount)
             .Throws<EntityNotFoundException<Otp>>();
 
         // Act and Assert
@@ -217,7 +218,7 @@ public class AuthServiceTests
         await _storeMock
             .Otp
             .Received(1)
-            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount);
+            .FindActiveByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount);
 
         await _storeMock
             .DidNotReceive()
@@ -246,7 +247,7 @@ public class AuthServiceTests
 
         _storeMock
             .Otp
-            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount)
+            .FindActiveByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount)
             .Returns(code);
 
         // Act and Assert
@@ -261,7 +262,7 @@ public class AuthServiceTests
         await _storeMock
             .Otp
             .Received(1)
-            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount);
+            .FindActiveByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount);
 
         await _storeMock
             .DidNotReceive()
@@ -291,7 +292,7 @@ public class AuthServiceTests
 
         _storeMock
             .Otp
-            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount)
+            .FindActiveByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount)
             .Returns(code);
 
         // Act
@@ -306,7 +307,7 @@ public class AuthServiceTests
         await _storeMock
             .Otp
             .Received(1)
-            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount);
+            .FindActiveByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount);
 
         Assert.True(user.EmailConfirmed);
         Assert.True(user.Account.Confirmed);
@@ -1131,7 +1132,7 @@ public class AuthServiceTests
 
         _storeMock
             .Otp
-            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword)
+            .FindActiveByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword)
             .Throws<EntityNotFoundException<Otp>>();
 
         // Act and Assert
@@ -1146,7 +1147,7 @@ public class AuthServiceTests
         await _storeMock
             .Otp
             .Received(1)
-            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
+            .FindActiveByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
     }
 
     [Fact]
@@ -1173,7 +1174,7 @@ public class AuthServiceTests
 
         _storeMock
             .Otp
-            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword)
+            .FindActiveByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword)
             .Returns(code);
 
         // Act and Assert
@@ -1188,50 +1189,7 @@ public class AuthServiceTests
         await _storeMock
             .Otp
             .Received(1)
-            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
-    }
-
-    [Fact]
-    public async Task ConfirmResetPasswordAsync_RedeemedCode_ThrowsAuthException()
-    {
-        // Arrange
-        var dto = new ConfirmResetPasswordDto(_util.Email, _util.Password, _util.Otp);
-        var user = _util.User;
-        user.Account.Locked = false;
-        user.Account.Confirmed = true;
-
-        var code = new Otp
-        {
-            UserId = user.Id,
-            Code = dto.ConfirmationCode,
-            Type = OtpType.RegisterAccount,
-            ExpiredAt = DateTime.UtcNow.AddMinutes(1), // not expired yet
-            Redeemed = true // redeemed
-        };
-
-        _storeMock
-            .Users
-            .FindByEmailAsync(dto.Email)
-            .Returns(user);
-
-        _storeMock
-            .Otp
-            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword)
-            .Returns(code);
-
-        // Act and Assert
-        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ConfirmResetPasswordAsync(dto));
-        Assert.Equal(ErrorCode.IncorrectCode, ex.ErrorCode);
-
-        await _storeMock
-            .Users
-            .Received(1)
-            .FindByEmailAsync(dto.Email);
-
-        await _storeMock
-            .Otp
-            .Received(1)
-            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
+            .FindActiveByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
     }
 
     [Fact]
@@ -1258,7 +1216,7 @@ public class AuthServiceTests
 
         _storeMock
             .Otp
-            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword)
+            .FindActiveByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword)
             .Returns(code);
 
         var encrypted = new EncryptedPassword(string.Empty, string.Empty);
@@ -1282,7 +1240,7 @@ public class AuthServiceTests
         await _storeMock
             .Otp
             .Received(1)
-            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
+            .FindActiveByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
 
         _passwordHandlerMock
             .Received(1)
@@ -1413,6 +1371,246 @@ public class AuthServiceTests
         _passwordHandlerMock
             .Received(1)
             .Encrypt(dto.Password);
+
+        await _storeMock
+            .Received(1)
+            .FlushAsync();
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_InvalidToken_ThrowsAuthException()
+    {
+        // Arrange
+        var token = new TokenData(string.Empty, string.Empty);
+
+        _tokenProviderMock
+            .ReadAccessToken(token.AccessToken)
+            .Throws(new InvalidTokenException(token.AccessToken));
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.RefreshTokenAsync(token));
+        Assert.Equal(ErrorCode.InvalidToken, ex.ErrorCode);
+
+        _tokenProviderMock
+            .Received(1)
+            .ReadAccessToken(token.AccessToken);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_InvalidTokenUser_ThrowsAuthException()
+    {
+        // Arrange
+        var token = new TokenData(string.Empty, string.Empty);
+        var details = _util.TokenDetails;
+        var userId = new Guid(details.Subject);
+
+        _tokenProviderMock
+            .ReadAccessToken(token.AccessToken)
+            .Returns(details);
+
+        _storeMock
+            .Users
+            .FindByIdAsync(userId)
+            .Throws<EntityNotFoundException<User>>();
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.RefreshTokenAsync(token));
+        Assert.Equal(ErrorCode.InvalidToken, ex.ErrorCode);
+
+        _tokenProviderMock
+            .Received(1)
+            .ReadAccessToken(token.AccessToken);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(userId);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_LockedAccount_ThrowsAuthException()
+    {
+        // Arrange
+        var token = new TokenData(string.Empty, string.Empty);
+        var details = _util.TokenDetails;
+        var user = _util.User;
+        user.Account.Locked = true;
+
+        _tokenProviderMock
+            .ReadAccessToken(token.AccessToken)
+            .Returns(details);
+
+        _storeMock
+            .Users
+            .FindByIdAsync(user.Id)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.RefreshTokenAsync(token));
+        Assert.Equal(ErrorCode.LockedAccount, ex.ErrorCode);
+
+        _tokenProviderMock
+            .Received(1)
+            .ReadAccessToken(token.AccessToken);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(user.Id);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_InvalidRefreshToken_ThrowsAuthException()
+    {
+        // Arrange
+        var token = new TokenData(string.Empty, string.Empty);
+        var details = _util.TokenDetails;
+        var user = _util.User;
+        user.Account.Locked = false;
+
+        _tokenProviderMock
+            .ReadAccessToken(token.AccessToken)
+            .Returns(details);
+
+        _storeMock
+            .Users
+            .FindByIdAsync(user.Id)
+            .Returns(user);
+
+        _storeMock
+            .RefreshTokens
+            .FindActiveByValueAsync(token.RefreshToken)
+            .Throws<EntityNotFoundException<RefreshToken>>();
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.RefreshTokenAsync(token));
+        Assert.Equal(ErrorCode.InvalidToken, ex.ErrorCode);
+
+        _tokenProviderMock
+            .Received(1)
+            .ReadAccessToken(token.AccessToken);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(user.Id);
+
+        await _storeMock
+            .RefreshTokens
+            .Received(1)
+            .FindActiveByValueAsync(token.RefreshToken);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_ExpiredToken_ThrowsAuthException()
+    {
+        // Arrange
+        var token = new TokenData(string.Empty, string.Empty);
+        var details = _util.TokenDetails;
+        var user = _util.User;
+        user.Account.Locked = false;
+
+        var refresh = new RefreshToken
+        {
+            Value = token.RefreshToken,
+            ExpiredAt = DateTime.UtcNow // expired
+        };
+
+        _tokenProviderMock
+            .ReadAccessToken(token.AccessToken)
+            .Returns(details);
+
+        _storeMock
+            .Users
+            .FindByIdAsync(user.Id)
+            .Returns(user);
+
+        _storeMock
+            .RefreshTokens
+            .FindActiveByValueAsync(token.RefreshToken)
+            .Returns(refresh);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.RefreshTokenAsync(token));
+        Assert.Equal(ErrorCode.ExpiredToken, ex.ErrorCode);
+
+        _tokenProviderMock
+            .Received(1)
+            .ReadAccessToken(token.AccessToken);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(user.Id);
+
+        await _storeMock
+            .RefreshTokens
+            .Received(1)
+            .FindActiveByValueAsync(token.RefreshToken);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_ValidInput_SuccessfullyRefreshToken()
+    {
+        // Arrange
+        var token = new TokenData(string.Empty, string.Empty);
+        var details = _util.TokenDetails;
+        var user = _util.User;
+        user.Account.Locked = false;
+
+        var refresh = new RefreshToken
+        {
+            Disabled = false,
+            Value = token.RefreshToken,
+            ExpiredAt = DateTime.UtcNow.AddMinutes(2) // not expired
+        };
+
+        _tokenProviderMock
+            .ReadAccessToken(token.AccessToken)
+            .Returns(details);
+
+        _storeMock
+            .Users
+            .FindByIdAsync(user.Id)
+            .Returns(user);
+
+        _storeMock
+            .RefreshTokens
+            .FindActiveByValueAsync(token.RefreshToken)
+            .Returns(refresh);
+
+        var nToken = new TokenData(string.Empty, "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9");
+        _tokenProviderMock
+            .CreateToken(user)
+            .Returns(nToken);
+
+        // Act
+        await _service.RefreshTokenAsync(token);
+
+        Assert.True(refresh.Disabled);
+        Assert.Single(user.RefreshTokens);
+        Assert.Equal(nToken.RefreshToken, user.RefreshTokens.First().Value);
+        // new refresh token is created but it keeps the previous valid time
+        Assert.Equal(refresh.ExpiredAt, user.RefreshTokens.First().ExpiredAt);
+
+        // Assert
+        _tokenProviderMock
+            .Received(1)
+            .ReadAccessToken(token.AccessToken);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(user.Id);
+
+        await _storeMock
+            .RefreshTokens
+            .Received(1)
+            .FindActiveByValueAsync(token.RefreshToken);
+
+        _tokenProviderMock
+            .Received(1)
+            .CreateToken(user);
 
         await _storeMock
             .Received(1)
