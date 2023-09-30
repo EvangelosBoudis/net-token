@@ -1292,4 +1292,130 @@ public class AuthServiceTests
             .Received(1)
             .FlushAsync();
     }
+
+    [Fact]
+    public async Task ModifyPasswordAsync_InvalidToken_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new ModifyPasswordDto(string.Empty, _util.Password);
+        var auth = _util.AuthUser;
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Throws<EntityNotFoundException<User>>();
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ModifyPasswordAsync(auth, dto));
+        Assert.Equal(ErrorCode.InvalidToken, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+    }
+
+    [Fact]
+    public async Task ModifyPasswordAsync_LockedAccount_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new ModifyPasswordDto(string.Empty, _util.Password);
+        var auth = _util.AuthUser;
+        var user = _util.User;
+        user.Account.Locked = true;
+
+        _storeMock
+            .Users
+            .FindByIdAsync(user.Id)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ModifyPasswordAsync(auth, dto));
+        Assert.Equal(ErrorCode.LockedAccount, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(user.Id);
+    }
+
+    [Fact]
+    public async Task ModifyPasswordAsync_IncorrectPassword_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new ModifyPasswordDto(_util.Password, "comeIn123@@");
+        var auth = _util.AuthUser;
+        var user = _util.User;
+        user.Account.Locked = false;
+
+        _storeMock
+            .Users
+            .FindByIdAsync(user.Id)
+            .Returns(user);
+
+        _passwordHandlerMock
+            .Decrypt(dto.CurrentPassword, user.PasswordHash, user.PasswordSalt)
+            .Returns(false);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ModifyPasswordAsync(auth, dto));
+        Assert.Equal(ErrorCode.IncorrectPassword, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(user.Id);
+
+        _passwordHandlerMock
+            .Received(1)
+            .Decrypt(dto.CurrentPassword, user.PasswordHash, user.PasswordSalt);
+    }
+
+    [Fact]
+    public async Task ModifyPasswordAsync_ValidInput_SuccessfullyModifyPassword()
+    {
+        // Arrange
+        var dto = new ModifyPasswordDto(_util.Password, "comeIn123@@");
+        var auth = _util.AuthUser;
+        var user = _util.User;
+        user.Account.Locked = false;
+        var encrypted = new EncryptedPassword(string.Empty, string.Empty);
+
+        _storeMock
+            .Users
+            .FindByIdAsync(user.Id)
+            .Returns(user);
+
+        _passwordHandlerMock
+            .Decrypt(dto.CurrentPassword, user.PasswordHash, user.PasswordSalt)
+            .Returns(true);
+
+        _passwordHandlerMock
+            .Encrypt(dto.Password)
+            .Returns(encrypted);
+
+        // Act
+        await _service.ModifyPasswordAsync(auth, dto);
+
+        // Assert
+        Assert.Equal(encrypted.Hash, user.PasswordHash);
+        Assert.Equal(encrypted.Salt, user.PasswordSalt);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(user.Id);
+
+        _passwordHandlerMock
+            .ReceivedWithAnyArgs(1)
+            .Decrypt(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+
+        _passwordHandlerMock
+            .Received(1)
+            .Encrypt(dto.Password);
+
+        await _storeMock
+            .Received(1)
+            .FlushAsync();
+    }
 }
