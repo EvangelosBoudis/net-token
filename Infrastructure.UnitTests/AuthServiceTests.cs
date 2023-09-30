@@ -1046,4 +1046,250 @@ public class AuthServiceTests
                     email.Subject == "Email Confirmation" &&
                     email.Content.Contains(code.Content)));
     }
+
+    [Fact]
+    public async Task ConfirmResetPasswordAsync_IncorrectEmail_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new ConfirmResetPasswordDto(_util.Email, _util.Password, _util.Otp);
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Throws<EntityNotFoundException<User>>();
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ConfirmResetPasswordAsync(dto));
+        Assert.Equal(ErrorCode.IncorrectEmail, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+    }
+
+    [Fact]
+    public async Task ConfirmResetPasswordAsync_LockedAccount_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new ConfirmResetPasswordDto(_util.Email, _util.Password, _util.Otp);
+        var user = _util.User;
+        user.Account.Locked = true;
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ConfirmResetPasswordAsync(dto));
+        Assert.Equal(ErrorCode.LockedAccount, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+    }
+
+    [Fact]
+    public async Task ConfirmResetPasswordAsync_UnconfirmedAccount_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new ConfirmResetPasswordDto(_util.Email, _util.Password, _util.Otp);
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.Account.Confirmed = false;
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ConfirmResetPasswordAsync(dto));
+        Assert.Equal(ErrorCode.UnconfirmedAccount, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+    }
+
+    [Fact]
+    public async Task ConfirmResetPasswordAsync_IncorrectCode_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new ConfirmResetPasswordDto(_util.Email, _util.Password, _util.Otp);
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.Account.Confirmed = true;
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Returns(user);
+
+        _storeMock
+            .Otp
+            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword)
+            .Throws<EntityNotFoundException<Otp>>();
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ConfirmResetPasswordAsync(dto));
+        Assert.Equal(ErrorCode.IncorrectCode, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .Otp
+            .Received(1)
+            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
+    }
+
+    [Fact]
+    public async Task ConfirmResetPasswordAsync_ExpiredCode_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new ConfirmResetPasswordDto(_util.Email, _util.Password, _util.Otp);
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.Account.Confirmed = true;
+
+        var code = new Otp
+        {
+            UserId = user.Id,
+            Code = dto.ConfirmationCode,
+            Type = OtpType.RegisterAccount,
+            ExpiredAt = DateTime.UtcNow // expired
+        };
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Returns(user);
+
+        _storeMock
+            .Otp
+            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword)
+            .Returns(code);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ConfirmResetPasswordAsync(dto));
+        Assert.Equal(ErrorCode.ExpiredCode, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .Otp
+            .Received(1)
+            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
+    }
+
+    [Fact]
+    public async Task ConfirmResetPasswordAsync_RedeemedCode_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new ConfirmResetPasswordDto(_util.Email, _util.Password, _util.Otp);
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.Account.Confirmed = true;
+
+        var code = new Otp
+        {
+            UserId = user.Id,
+            Code = dto.ConfirmationCode,
+            Type = OtpType.RegisterAccount,
+            ExpiredAt = DateTime.UtcNow.AddMinutes(1), // not expired yet
+            Redeemed = true // redeemed
+        };
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Returns(user);
+
+        _storeMock
+            .Otp
+            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword)
+            .Returns(code);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ConfirmResetPasswordAsync(dto));
+        Assert.Equal(ErrorCode.IncorrectCode, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .Otp
+            .Received(1)
+            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
+    }
+
+    [Fact]
+    public async Task ConfirmResetPasswordAsync_ValidInput_SuccessfullyConfirmResetPassword()
+    {
+        // Arrange
+        var dto = new ConfirmResetPasswordDto(_util.Email, _util.Password, _util.Otp);
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.Account.Confirmed = true;
+
+        var code = new Otp
+        {
+            UserId = user.Id,
+            Code = dto.ConfirmationCode,
+            Type = OtpType.RegisterAccount,
+            ExpiredAt = DateTime.UtcNow.AddSeconds(2) // not expired yet
+        };
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Returns(user);
+
+        _storeMock
+            .Otp
+            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword)
+            .Returns(code);
+
+        var encrypted = new EncryptedPassword(string.Empty, string.Empty);
+        _passwordHandlerMock
+            .Encrypt(dto.Password)
+            .Returns(encrypted);
+
+        // Act
+        await _service.ConfirmResetPasswordAsync(dto);
+
+        // Assert
+        Assert.True(code.Redeemed);
+        Assert.Equal(encrypted.Hash, user.PasswordHash);
+        Assert.Equal(encrypted.Salt, user.PasswordSalt);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .Otp
+            .Received(1)
+            .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
+
+        _passwordHandlerMock
+            .Received(1)
+            .Encrypt(dto.Password);
+
+        await _storeMock
+            .Received(1)
+            .FlushAsync();
+    }
 }
