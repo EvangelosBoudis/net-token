@@ -9,6 +9,7 @@ using Application.Password;
 using Application.Store;
 using Application.Token;
 using Application.Token.Data;
+using Application.Token.Exceptions;
 using Domain.Data;
 using Domain.Entities;
 using Domain.Enums;
@@ -99,7 +100,7 @@ public class AuthService : IAuthService
         {
             code = await _store
                 .Otp
-                .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount);
+                .FindActiveByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.RegisterAccount);
         }
         catch (EntityNotFoundException<Otp>)
         {
@@ -314,14 +315,13 @@ public class AuthService : IAuthService
         {
             code = await _store
                 .Otp
-                .FindByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
+                .FindActiveByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
         }
         catch (EntityNotFoundException<Otp>)
         {
             throw new AuthException(ErrorCode.IncorrectCode);
         }
 
-        if (code.Redeemed) throw new AuthException(ErrorCode.IncorrectCode);
         if (code.ExpiredAt < DateTime.UtcNow) throw new AuthException(ErrorCode.ExpiredCode);
 
         var encrypted = _passwordHandler.Encrypt(dto.Password);
@@ -367,7 +367,16 @@ public class AuthService : IAuthService
 
     public async Task<TokenData> RefreshTokenAsync(TokenData token)
     {
-        var details = _tokenProvider.ReadAccessToken(token.AccessToken);
+        TokenDetails details;
+        try
+        {
+            details = _tokenProvider.ReadAccessToken(token.AccessToken);
+        }
+        catch (InvalidTokenException err)
+        {
+            throw new AuthException(err.ErrorCode);
+        }
+
         var userId = Guid.Parse(details.Subject);
 
         User user;
