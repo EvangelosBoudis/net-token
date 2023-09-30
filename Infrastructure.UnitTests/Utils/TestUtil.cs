@@ -1,6 +1,7 @@
 using System.Reflection;
 using Application.Notification.Data;
 using Application.Token.Data;
+using Domain.Data;
 using Domain.Entities;
 using Newtonsoft.Json;
 
@@ -30,6 +31,8 @@ public class TestUtil
     public TokenOptions TokenOptions { get; }
 
     public User User { get; }
+
+    public AuthUser AuthUser { get; }
 
     public Challenge Challenge { get; }
 
@@ -81,5 +84,11 @@ public class TestUtil
             ExpiredAt = DateTime.UtcNow,
             TwoFactorAuth = auth
         };
+
+        AuthUser = new AuthUser(
+            User.Id, User.Email,
+            User.Username, User.PhoneNumber,
+            User.PhoneNumberConfirmed,
+            User.TwoFactorAuth.Enabled);
     }
 }
