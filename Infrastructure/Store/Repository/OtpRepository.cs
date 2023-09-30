@@ -11,7 +11,7 @@ public class OtpRepository : CrudRepository<Otp, Guid>, IOtpRepository
     {
     }
 
-    public async Task<Otp> FindByUserIdCodeAndTypeAsync(Guid userId, string code, OtpType type)
+    public async Task<Otp> FindActiveByUserIdCodeAndTypeAsync(Guid userId, string code, OtpType type)
     {
         return await FindAsync(
             t => t.UserId == userId && t.Type == type && t.Code == code && !t.Disabled && !t.Redeemed);
