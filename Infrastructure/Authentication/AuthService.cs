@@ -321,6 +321,7 @@ public class AuthService : IAuthService
             throw new AuthException(ErrorCode.IncorrectCode);
         }
 
+        if (code.Redeemed) throw new AuthException(ErrorCode.IncorrectCode);
         if (code.ExpiredAt < DateTime.UtcNow) throw new AuthException(ErrorCode.ExpiredCode);
 
         var encrypted = _passwordHandler.Encrypt(dto.Password);
