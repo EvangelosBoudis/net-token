@@ -420,7 +420,9 @@ public class AuthService : IAuthService
         User user;
         try
         {
-            user = await _store.Users.FindByIdNoTrackingAsync(auth.Id);
+            user = await _store
+                .Users
+                .FindByIdNoTrackingAsync(auth.Id);
         }
         catch (EntityNotFoundException<User>)
         {
@@ -429,7 +431,9 @@ public class AuthService : IAuthService
 
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
 
-        await _store.RefreshTokens.UpdateAsRevokedAsync(auth.Id);
+        await _store
+            .RefreshTokens
+            .UpdateAsRevokedAsync(auth.Id);
     }
 
     public async Task RevokeRefreshTokensAsync(ClaimsPrincipal principal)
