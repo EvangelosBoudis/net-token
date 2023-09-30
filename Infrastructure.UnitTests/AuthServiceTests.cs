@@ -638,7 +638,7 @@ public class AuthServiceTests
         Assert.False(user.Account.Locked);
         Assert.Null(user.Account.LockEndAt);
         Assert.Equal(0, user.Account.FailedAccessAttempts);
-        Assert.Equal(1, user.TwoFactorAuth.Challenges.Count);
+        Assert.Single(user.TwoFactorAuth.Challenges);
         Assert.Equal(key, user.TwoFactorAuth.Challenges.First().Key);
 
         var lockMinutes = (user.TwoFactorAuth.Challenges.First().ExpiredAt - DateTime.UtcNow).Minutes;
@@ -699,7 +699,7 @@ public class AuthServiceTests
         Assert.False(user.Account.Locked);
         Assert.Null(user.Account.LockEndAt);
         Assert.Equal(0, user.Account.FailedAccessAttempts);
-        Assert.Equal(0, user.TwoFactorAuth.Challenges.Count);
+        Assert.Empty(user.TwoFactorAuth.Challenges);
 
         Assert.Equal(token, result.Token);
         Assert.True(result.SignedIn);
@@ -879,7 +879,7 @@ public class AuthServiceTests
         // Assert
         Assert.True(result.SignedIn);
         Assert.True(challenge.Redeemed);
-        Assert.Equal(1, challenge.TwoFactorAuth.User.RefreshTokens.Count);
+        Assert.Single(challenge.TwoFactorAuth.User.RefreshTokens);
 
         var refreshToken = challenge.TwoFactorAuth.User.RefreshTokens.First();
         Assert.Equal(token.RefreshToken, refreshToken.Value);
@@ -905,5 +905,145 @@ public class AuthServiceTests
         await _storeMock
             .Received(1)
             .FlushAsync();
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_IncorrectEmail_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new ResetPasswordDto(_util.Email);
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Throws<EntityNotFoundException<User>>();
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ResetPasswordAsync(dto));
+        Assert.Equal(ErrorCode.IncorrectEmail, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .DidNotReceive()
+            .FlushAsync();
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_LockedAccount_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new ResetPasswordDto(_util.Email);
+        var user = _util.User;
+        user.Account.Locked = true;
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ResetPasswordAsync(dto));
+        Assert.Equal(ErrorCode.LockedAccount, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .DidNotReceive()
+            .FlushAsync();
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_UnconfirmedAccount_ThrowsAuthException()
+    {
+        // Arrange
+        var dto = new ResetPasswordDto(_util.Email);
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.Account.Confirmed = false;
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ResetPasswordAsync(dto));
+        Assert.Equal(ErrorCode.UnconfirmedAccount, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .DidNotReceive()
+            .FlushAsync();
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_ValidInput_SuccessfullyResetPassword()
+    {
+        // Arrange
+        var dto = new ResetPasswordDto(_util.Email);
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.Account.Confirmed = true;
+
+        _storeMock
+            .Users
+            .FindByEmailAsync(dto.Email)
+            .Returns(user);
+
+        _storeMock
+            .Otp
+            .UpdateAsDisabledActiveCodesAsync(user.Id, OtpType.ResetPassword)
+            .Returns(Task.CompletedTask);
+
+        var code = new TotpCode(_util.Otp, DateTime.UtcNow);
+        _keysManagerMock
+            .GenerateTotpCode()
+            .Returns(code);
+
+        // Act
+        await _service.ResetPasswordAsync(dto);
+
+        // Assert
+        Assert.Single(user.OneTimePasswords);
+        Assert.Equal(code.Content, user.OneTimePasswords.First().Code);
+        Assert.Equal(OtpType.ResetPassword, user.OneTimePasswords.First().Type);
+        Assert.Equal(code.IssuedAt.AddMinutes(5), user.OneTimePasswords.First().ExpiredAt);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByEmailAsync(dto.Email);
+
+        await _storeMock
+            .Otp
+            .Received(1)
+            .UpdateAsDisabledActiveCodesAsync(user.Id, OtpType.ResetPassword);
+
+        _keysManagerMock
+            .Received(1)
+            .GenerateTotpCode();
+
+        await _storeMock
+            .Received(1)
+            .FlushAsync();
+
+        await _notificationSenderMock
+            .Received(1)
+            .SendEmailAsync(
+                Arg.Is<EmailDto>(email =>
+                    email.Receiver == dto.Email &&
+                    email.Subject == "Email Confirmation" &&
+                    email.Content.Contains(code.Content)));
     }
 }
