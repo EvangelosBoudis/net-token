@@ -36,6 +36,8 @@ public class TestUtil
 
     public Challenge Challenge { get; }
 
+    public TokenDetails TokenDetails { get; }
+
     public TestUtil()
     {
         var stream = Assembly
@@ -65,7 +67,7 @@ public class TestUtil
 
         User = new User
         {
-            Id = new Guid(),
+            Id = Guid.NewGuid(),
             Username = data.Name,
             Email = data.Email,
             PhoneNumber = data.Phone,
@@ -88,6 +90,20 @@ public class TestUtil
         AuthUser = new AuthUser(
             User.Id, User.Email,
             User.Username, User.PhoneNumber,
+            User.PhoneNumberConfirmed,
+            User.TwoFactorAuth.Enabled);
+
+        TokenDetails = new TokenDetails(
+            User.Id.ToString(),
+            data.Token.Issuer,
+            DateTime.UtcNow,
+            data.Token.Audience,
+            DateTime.UtcNow,
+            DateTime.UtcNow.AddMinutes(5),
+            string.Empty,
+            User.Username,
+            User.Email,
+            User.PhoneNumber,
             User.PhoneNumberConfirmed,
             User.TwoFactorAuth.Enabled);
     }
