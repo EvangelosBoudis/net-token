@@ -466,7 +466,7 @@ public class AuthService : IAuthService
         }
 
         if (user.Account.Locked) throw new AuthException(ErrorCode.LockedAccount);
-        if (user.TwoFactorAuth is not null && user.TwoFactorAuth.Enabled)
+        if (user.TwoFactorAuth is { Enabled: true })
             throw new AuthException(ErrorCode.AlreadyActivatedTwoFactorAuth);
 
         var key = _keysManager.GenerateRandomBase32Key();
