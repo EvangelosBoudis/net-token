@@ -607,7 +607,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task SignInAsync_ValidInput_TwoFactorAuthEnabled_ReturnsChallengeKey()
+    public async Task SignInAsync_ValidInput_TwoFactorAuthEnabled_SuccessfullyReturnsChallengeKey()
     {
         // Arrange
         var dto = new SignInDto(_util.Email, _util.Password);
@@ -1662,7 +1662,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task RevokeRefreshTokensAsync_ValidInput_RevokeRefreshTokens()
+    public async Task RevokeRefreshTokensAsync_ValidInput_SuccessfullyRevokeRefreshTokens()
     {
         // Arrange
         var auth = _util.AuthUser;
@@ -1692,5 +1692,134 @@ public class AuthServiceTests
             .RefreshTokens
             .Received(1)
             .UpdateAsRevokedAsync(auth.Id);
+    }
+
+    [Fact]
+    public async Task ActivateTwoFactorAuthAsync_InvalidToken_ThrowsAuthException()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Throws<EntityNotFoundException<User>>();
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ActivateTwoFactorAuthAsync(auth));
+        Assert.Equal(ErrorCode.InvalidToken, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+    }
+
+    [Fact]
+    public async Task ActivateTwoFactorAuthAsync_LockedAccount_ThrowsAuthException()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var user = _util.User;
+        user.Account.Locked = true;
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ActivateTwoFactorAuthAsync(auth));
+        Assert.Equal(ErrorCode.LockedAccount, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+    }
+
+    [Fact]
+    public async Task ActivateTwoFactorAuthAsync_AlreadyActivated_ThrowsAuthException()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.TwoFactorAuth!.Enabled = true;
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.ActivateTwoFactorAuthAsync(auth));
+        Assert.Equal(ErrorCode.AlreadyActivatedTwoFactorAuth, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+    }
+
+    [Fact]
+    public async Task ActivateTwoFactorAuthAsync_ValidInput_SuccessfullyActivateTwoFactorAuth()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.TwoFactorAuth = null;
+        var key = _util.AuthenticatorKey;
+        var options = _util.TokenOptions;
+        const string uri = "mock_uri";
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Returns(user);
+
+        _keysManagerMock
+            .GenerateRandomBase32Key()
+            .Returns(key);
+
+        _keysManagerMock
+            .GenerateTotpUri(key, user.Email, options.Issuer)
+            .Returns(uri);
+
+        // Act
+        await _service.ActivateTwoFactorAuthAsync(auth);
+
+        // Assert
+        Assert.NotNull(user.TwoFactorAuth);
+        Assert.Equal(key, user.TwoFactorAuth.AuthenticatorKey);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+
+        _keysManagerMock
+            .Received(1)
+            .GenerateRandomBase32Key();
+
+        await _storeMock
+            .Received(1)
+            .FlushAsync();
+
+        _keysManagerMock
+            .Received(1)
+            .GenerateTotpUri(key, user.Email, options.Issuer);
+
+        await _notificationSenderMock
+            .Received(1)
+            .SendEmailAsync(
+                Arg.Is<EmailDto>(email =>
+                    email.Receiver == user.Email &&
+                    email.Subject == "Two Factor Authentication" &&
+                    email.Content ==
+                    $"<img src= \"https://chart.googleapis.com/chart?chs=250x250&cht=qr&chl={uri}\" />" &&
+                    email.Html)
+            );
     }
 }
