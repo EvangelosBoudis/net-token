@@ -1616,4 +1616,81 @@ public class AuthServiceTests
             .Received(1)
             .FlushAsync();
     }
+
+    [Fact]
+    public async Task RevokeRefreshTokensAsync_InvalidToken_ThrowsAuthException()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+
+        _storeMock
+            .Users
+            .FindByIdNoTrackingAsync(auth.Id)
+            .Throws<EntityNotFoundException<User>>();
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.RevokeRefreshTokensAsync(auth));
+        Assert.Equal(ErrorCode.InvalidToken, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdNoTrackingAsync(auth.Id);
+    }
+
+    [Fact]
+    public async Task RevokeRefreshTokensAsync_LockedAccount_ThrowsAuthException()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var user = _util.User;
+        user.Account.Locked = true;
+
+        _storeMock
+            .Users
+            .FindByIdNoTrackingAsync(auth.Id)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.RevokeRefreshTokensAsync(auth));
+        Assert.Equal(ErrorCode.LockedAccount, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdNoTrackingAsync(auth.Id);
+    }
+
+    [Fact]
+    public async Task RevokeRefreshTokensAsync_ValidInput_RevokeRefreshTokens()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var user = _util.User;
+        user.Account.Locked = false;
+
+        _storeMock
+            .Users
+            .FindByIdNoTrackingAsync(auth.Id)
+            .Returns(user);
+
+        _storeMock
+            .RefreshTokens
+            .UpdateAsRevokedAsync(auth.Id)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _service.RevokeRefreshTokensAsync(auth);
+
+        // Assert
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdNoTrackingAsync(auth.Id);
+
+        await _storeMock
+            .RefreshTokens
+            .Received(1)
+            .UpdateAsRevokedAsync(auth.Id);
+    }
 }
