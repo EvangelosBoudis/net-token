@@ -14,7 +14,7 @@ public interface IAuthService
 
     Task<SignInResult> SignInAsync(SignInDto dto);
 
-    Task<SignInResult> TwoFactorSignAsync(TwoFactorSignInDto dto);
+    Task<SignInResult> TwoFactorSignInAsync(TwoFactorSignInDto dto);
 
     Task ResetPasswordAsync(ResetPasswordDto dto);
 

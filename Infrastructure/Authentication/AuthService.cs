@@ -216,7 +216,7 @@ public class AuthService : IAuthService
         return new SignInResult(token);
     }
 
-    public async Task<SignInResult> TwoFactorSignAsync(TwoFactorSignInDto dto)
+    public async Task<SignInResult> TwoFactorSignInAsync(TwoFactorSignInDto dto)
     {
         Challenge challenge;
         try

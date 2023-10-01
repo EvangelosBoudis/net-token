@@ -48,7 +48,7 @@ public class AuthController : ControllerBase
     [HttpPost("two-factor-sign-in")]
     public async Task<IActionResult> TwoFactorSignIn([FromBody] TwoFactorSignInDto request)
     {
-        var result = await _authService.TwoFactorSignAsync(request);
+        var result = await _authService.TwoFactorSignInAsync(request);
         return Ok(result);
     }
 

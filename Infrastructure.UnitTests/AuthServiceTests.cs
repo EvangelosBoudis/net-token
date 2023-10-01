@@ -27,7 +27,7 @@ public class AuthServiceTests
 
     private readonly TestUtil _util;
     private readonly IStore _storeMock = Substitute.For<IStore>();
-    private readonly IKeysManager _keysManagerMock = Substitute.For<IKeysManager>();
+    private readonly IKeysManager _managerMock = Substitute.For<IKeysManager>();
     private readonly ITokenProvider _providerMock = Substitute.For<ITokenProvider>();
     private readonly IPasswordHandler _handlerMock = Substitute.For<IPasswordHandler>();
     private readonly INotificationSender _senderMock = Substitute.For<INotificationSender>();
@@ -40,7 +40,7 @@ public class AuthServiceTests
         _service = new AuthService(
             _storeMock,
             options,
-            _keysManagerMock,
+            _managerMock,
             _providerMock,
             _handlerMock,
             _senderMock);
@@ -83,7 +83,7 @@ public class AuthServiceTests
             .Returns(false);
 
         var code = new TotpCode(_util.Otp, DateTime.UtcNow);
-        _keysManagerMock
+        _managerMock
             .GenerateTotpCode()
             .Returns(code);
 
@@ -101,7 +101,7 @@ public class AuthServiceTests
             .Received(1)
             .ExistsByUsernameOrEmailAsync(dto.Username, dto.Email);
 
-        _keysManagerMock
+        _managerMock
             .Received(1)
             .GenerateTotpCode();
 
@@ -388,7 +388,7 @@ public class AuthServiceTests
             .Returns(Task.CompletedTask);
 
         var code = new TotpCode(_util.Otp, DateTime.UtcNow);
-        _keysManagerMock
+        _managerMock
             .GenerateTotpCode()
             .Returns(code);
 
@@ -406,7 +406,7 @@ public class AuthServiceTests
             .Received(1)
             .UpdateAsDisabledActiveCodesAsync(user.Id, OtpType.RegisterAccount);
 
-        _keysManagerMock
+        _managerMock
             .Received(1)
             .GenerateTotpCode();
 
@@ -628,7 +628,7 @@ public class AuthServiceTests
             .Returns(true);
 
         var key = _util.AuthenticatorKey;
-        _keysManagerMock
+        _managerMock
             .GenerateRandomBase32Key()
             .Returns(key);
 
@@ -658,7 +658,7 @@ public class AuthServiceTests
             .Received(1)
             .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt);
 
-        _keysManagerMock
+        _managerMock
             .Received(1)
             .GenerateRandomBase32Key();
 
@@ -736,7 +736,7 @@ public class AuthServiceTests
             .Throws<EntityNotFoundException<Challenge>>();
 
         // Act and Assert
-        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.TwoFactorSignAsync(dto));
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.TwoFactorSignInAsync(dto));
         Assert.Equal(ErrorCode.IncorrectKey, ex.ErrorCode);
 
         await _storeMock
@@ -759,7 +759,7 @@ public class AuthServiceTests
             .Returns(challenge);
 
         // Act and Assert
-        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.TwoFactorSignAsync(dto));
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.TwoFactorSignInAsync(dto));
         Assert.Equal(ErrorCode.IncorrectKey, ex.ErrorCode);
 
         await _storeMock
@@ -782,7 +782,7 @@ public class AuthServiceTests
             .Returns(challenge);
 
         // Act and Assert
-        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.TwoFactorSignAsync(dto));
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.TwoFactorSignInAsync(dto));
         Assert.Equal(ErrorCode.ExpiredKey, ex.ErrorCode);
 
         await _storeMock
@@ -807,7 +807,7 @@ public class AuthServiceTests
             .Returns(challenge);
 
         // Act and Assert
-        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.TwoFactorSignAsync(dto));
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.TwoFactorSignInAsync(dto));
         Assert.Equal(ErrorCode.LockedAccount, ex.ErrorCode);
 
         await _storeMock
@@ -831,12 +831,12 @@ public class AuthServiceTests
             .FindByKeyAsync(dto.ChallengeKey)
             .Returns(challenge);
 
-        _keysManagerMock
+        _managerMock
             .ValidateTotpCode(challenge.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode)
             .Returns(false);
 
         // Act and Assert
-        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.TwoFactorSignAsync(dto));
+        var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.TwoFactorSignInAsync(dto));
         Assert.Equal(ErrorCode.IncorrectCode, ex.ErrorCode);
 
         await _storeMock
@@ -844,7 +844,7 @@ public class AuthServiceTests
             .Received(1)
             .FindByKeyAsync(dto.ChallengeKey);
 
-        _keysManagerMock
+        _managerMock
             .Received(1)
             .ValidateTotpCode(challenge.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode);
     }
@@ -865,7 +865,7 @@ public class AuthServiceTests
             .FindByKeyAsync(dto.ChallengeKey)
             .Returns(challenge);
 
-        _keysManagerMock
+        _managerMock
             .ValidateTotpCode(challenge.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode)
             .Returns(true);
 
@@ -875,7 +875,7 @@ public class AuthServiceTests
             .Returns(token);
 
         // Act
-        var result = await _service.TwoFactorSignAsync(dto);
+        var result = await _service.TwoFactorSignInAsync(dto);
 
         // Assert
         Assert.True(result.SignedIn);
@@ -895,7 +895,7 @@ public class AuthServiceTests
             .Received(1)
             .FindByKeyAsync(dto.ChallengeKey);
 
-        _keysManagerMock
+        _managerMock
             .Received(1)
             .ValidateTotpCode(challenge.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode);
 
@@ -1008,7 +1008,7 @@ public class AuthServiceTests
             .Returns(Task.CompletedTask);
 
         var code = new TotpCode(_util.Otp, DateTime.UtcNow);
-        _keysManagerMock
+        _managerMock
             .GenerateTotpCode()
             .Returns(code);
 
@@ -1031,7 +1031,7 @@ public class AuthServiceTests
             .Received(1)
             .UpdateAsDisabledActiveCodesAsync(user.Id, OtpType.ResetPassword);
 
-        _keysManagerMock
+        _managerMock
             .Received(1)
             .GenerateTotpCode();
 
@@ -1779,11 +1779,11 @@ public class AuthServiceTests
             .FindByIdAsync(auth.Id)
             .Returns(user);
 
-        _keysManagerMock
+        _managerMock
             .GenerateRandomBase32Key()
             .Returns(key);
 
-        _keysManagerMock
+        _managerMock
             .GenerateTotpUri(key, user.Email, options.Issuer)
             .Returns(uri);
 
@@ -1799,7 +1799,7 @@ public class AuthServiceTests
             .Received(1)
             .FindByIdAsync(auth.Id);
 
-        _keysManagerMock
+        _managerMock
             .Received(1)
             .GenerateRandomBase32Key();
 
@@ -1807,7 +1807,7 @@ public class AuthServiceTests
             .Received(1)
             .FlushAsync();
 
-        _keysManagerMock
+        _managerMock
             .Received(1)
             .GenerateTotpUri(key, user.Email, options.Issuer);
 
@@ -1938,7 +1938,7 @@ public class AuthServiceTests
             .FindByIdAsync(auth.Id)
             .Returns(user);
 
-        _keysManagerMock
+        _managerMock
             .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode)
             .Returns(false);
 
@@ -1952,7 +1952,7 @@ public class AuthServiceTests
             .Received(1)
             .FindByIdAsync(auth.Id);
 
-        _keysManagerMock
+        _managerMock
             .Received(1)
             .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode);
     }
@@ -1972,7 +1972,7 @@ public class AuthServiceTests
             .FindByIdAsync(auth.Id)
             .Returns(user);
 
-        _keysManagerMock
+        _managerMock
             .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode)
             .Returns(true);
 
@@ -1987,7 +1987,7 @@ public class AuthServiceTests
             .Received(1)
             .FindByIdAsync(auth.Id);
 
-        _keysManagerMock
+        _managerMock
             .Received(1)
             .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode);
 
@@ -2085,7 +2085,7 @@ public class AuthServiceTests
             .FindByIdAsync(auth.Id)
             .Returns(user);
 
-        _keysManagerMock
+        _managerMock
             .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode)
             .Returns(false);
 
@@ -2099,7 +2099,7 @@ public class AuthServiceTests
             .Received(1)
             .FindByIdAsync(auth.Id);
 
-        _keysManagerMock
+        _managerMock
             .Received(1)
             .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode);
     }
@@ -2119,7 +2119,7 @@ public class AuthServiceTests
             .FindByIdAsync(auth.Id)
             .Returns(user);
 
-        _keysManagerMock
+        _managerMock
             .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode)
             .Returns(true);
 
@@ -2134,7 +2134,7 @@ public class AuthServiceTests
             .Received(1)
             .FindByIdAsync(auth.Id);
 
-        _keysManagerMock
+        _managerMock
             .Received(1)
             .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode);
 
