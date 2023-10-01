@@ -1822,4 +1822,177 @@ public class AuthServiceTests
                     email.Html)
             );
     }
+
+    [Fact]
+    public async Task ConfirmTwoFactorAuthActivationAsync_InvalidToken_ThrowsAuthException()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var dto = new ConfirmTwoFactorAuthActivationDto(_util.Otp);
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Throws<EntityNotFoundException<User>>();
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () =>
+            await _service.ConfirmTwoFactorAuthActivationAsync(auth, dto));
+        Assert.Equal(ErrorCode.InvalidToken, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+    }
+
+    [Fact]
+    public async Task ConfirmTwoFactorAuthActivationAsync_LockedAccount_ThrowsAuthException()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var dto = new ConfirmTwoFactorAuthActivationDto(_util.Otp);
+        var user = _util.User;
+        user.Account.Locked = true;
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () =>
+            await _service.ConfirmTwoFactorAuthActivationAsync(auth, dto));
+        Assert.Equal(ErrorCode.LockedAccount, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+    }
+
+    [Fact]
+    public async Task ConfirmTwoFactorAuthActivationAsync_NoAuthenticatorKey_ThrowsAuthException()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var dto = new ConfirmTwoFactorAuthActivationDto(_util.Otp);
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.TwoFactorAuth = null;
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () =>
+            await _service.ConfirmTwoFactorAuthActivationAsync(auth, dto));
+        Assert.Equal(ErrorCode.EmptyAuthenticatorKey, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+    }
+
+    [Fact]
+    public async Task ConfirmTwoFactorAuthActivationAsync_AlreadyActivatedTwoFactorAuth_ThrowsAuthException()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var dto = new ConfirmTwoFactorAuthActivationDto(_util.Otp);
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.TwoFactorAuth!.Enabled = true;
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () =>
+            await _service.ConfirmTwoFactorAuthActivationAsync(auth, dto));
+        Assert.Equal(ErrorCode.AlreadyActivatedTwoFactorAuth, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+    }
+
+    [Fact]
+    public async Task ConfirmTwoFactorAuthActivationAsync_IncorrectCode_ThrowsAuthException()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var dto = new ConfirmTwoFactorAuthActivationDto(_util.Otp);
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.TwoFactorAuth!.Enabled = false;
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Returns(user);
+
+        _keysManagerMock
+            .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode)
+            .Returns(false);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () =>
+            await _service.ConfirmTwoFactorAuthActivationAsync(auth, dto));
+        Assert.Equal(ErrorCode.IncorrectCode, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+
+        _keysManagerMock
+            .Received(1)
+            .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode);
+    }
+
+    [Fact]
+    public async Task ConfirmTwoFactorAuthActivationAsync_ValidInput_SuccessfullyConfirmTwoFactorAuthActivation()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var dto = new ConfirmTwoFactorAuthActivationDto(_util.Otp);
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.TwoFactorAuth!.Enabled = false;
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Returns(user);
+
+        _keysManagerMock
+            .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode)
+            .Returns(true);
+
+        // Act
+        await _service.ConfirmTwoFactorAuthActivationAsync(auth, dto);
+
+        // Act and Assert
+        Assert.True(user.TwoFactorAuth.Enabled);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+
+        _keysManagerMock
+            .Received(1)
+            .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode);
+
+        await _storeMock
+            .Received(1)
+            .FlushAsync();
+    }
 }
