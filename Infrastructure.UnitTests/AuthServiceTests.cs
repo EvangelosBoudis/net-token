@@ -725,7 +725,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task TwoFactorSignAsync_IncorrectKey_ThrowsAuthException()
+    public async Task TwoFactorSignInAsync_IncorrectKey_ThrowsAuthException()
     {
         // Arrange
         var dto = new TwoFactorSignInDto(_util.AuthenticatorKey, _util.Otp);
@@ -746,7 +746,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task TwoFactorSignAsync_RedeemedKey_ThrowsAuthException()
+    public async Task TwoFactorSignInAsync_RedeemedKey_ThrowsAuthException()
     {
         // Arrange
         var dto = new TwoFactorSignInDto(_util.AuthenticatorKey, _util.Otp);
@@ -769,7 +769,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task TwoFactorSignAsync_ExpiredKey_ThrowsAuthException()
+    public async Task TwoFactorSignInAsync_ExpiredKey_ThrowsAuthException()
     {
         // Arrange
         var dto = new TwoFactorSignInDto(_util.AuthenticatorKey, _util.Otp);
@@ -792,7 +792,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task TwoFactorSignAsync_LockedAccount_ThrowsAuthException()
+    public async Task TwoFactorSignInAsync_LockedAccount_ThrowsAuthException()
     {
         // Arrange
         var dto = new TwoFactorSignInDto(_util.AuthenticatorKey, _util.Otp);
@@ -817,7 +817,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task TwoFactorSignAsync_IncorrectCode_ThrowsAuthException()
+    public async Task TwoFactorSignInAsync_IncorrectCode_ThrowsAuthException()
     {
         // Arrange
         var dto = new TwoFactorSignInDto(_util.AuthenticatorKey, _util.Otp);
@@ -850,7 +850,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task TwoFactorSignAsync_ValidInput_SuccessfullySignIn()
+    public async Task TwoFactorSignInAsync_ValidInput_SuccessfullySignIn()
     {
         // Arrange
         var dto = new TwoFactorSignInDto(_util.AuthenticatorKey, _util.Otp);
