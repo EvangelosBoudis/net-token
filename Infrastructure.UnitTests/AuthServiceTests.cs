@@ -1979,8 +1979,155 @@ public class AuthServiceTests
         // Act
         await _service.ConfirmTwoFactorAuthActivationAsync(auth, dto);
 
-        // Act and Assert
+        // Assert
         Assert.True(user.TwoFactorAuth.Enabled);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+
+        _keysManagerMock
+            .Received(1)
+            .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode);
+
+        await _storeMock
+            .Received(1)
+            .FlushAsync();
+    }
+
+    [Fact]
+    public async Task DeactivateTwoFactorAuthAsync_InvalidToken_ThrowsAuthException()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var dto = new DeactivateTwoFactorAuthDto(_util.Otp);
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Throws<EntityNotFoundException<User>>();
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () =>
+            await _service.DeactivateTwoFactorAuthAsync(auth, dto));
+        Assert.Equal(ErrorCode.InvalidToken, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+    }
+
+    [Fact]
+    public async Task DeactivateTwoFactorAuthAsync_LockedAccount_ThrowsAuthException()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var dto = new DeactivateTwoFactorAuthDto(_util.Otp);
+        var user = _util.User;
+        user.Account.Locked = true;
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () =>
+            await _service.DeactivateTwoFactorAuthAsync(auth, dto));
+        Assert.Equal(ErrorCode.LockedAccount, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+    }
+
+    [Fact]
+    public async Task DeactivateTwoFactorAuthAsync_NotActivated_ThrowsAuthException()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var dto = new DeactivateTwoFactorAuthDto(_util.Otp);
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.TwoFactorAuth!.Enabled = false;
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Returns(user);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () =>
+            await _service.DeactivateTwoFactorAuthAsync(auth, dto));
+        Assert.Equal(ErrorCode.NotActivatedTwoFactorAuth, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+    }
+
+    [Fact]
+    public async Task DeactivateTwoFactorAuthAsync_IncorrectCode_ThrowsAuthException()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var dto = new DeactivateTwoFactorAuthDto(_util.Otp);
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.TwoFactorAuth!.Enabled = true;
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Returns(user);
+
+        _keysManagerMock
+            .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode)
+            .Returns(false);
+
+        // Act and Assert
+        var ex = await Assert.ThrowsAsync<AuthException>(async () =>
+            await _service.DeactivateTwoFactorAuthAsync(auth, dto));
+        Assert.Equal(ErrorCode.IncorrectCode, ex.ErrorCode);
+
+        await _storeMock
+            .Users
+            .Received(1)
+            .FindByIdAsync(auth.Id);
+
+        _keysManagerMock
+            .Received(1)
+            .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode);
+    }
+
+    [Fact]
+    public async Task DeactivateTwoFactorAuthAsync_ValidInput_SuccessfullyDeactivateTwoFactorAuth()
+    {
+        // Arrange
+        var auth = _util.AuthUser;
+        var dto = new DeactivateTwoFactorAuthDto(_util.Otp);
+        var user = _util.User;
+        user.Account.Locked = false;
+        user.TwoFactorAuth!.Enabled = true;
+
+        _storeMock
+            .Users
+            .FindByIdAsync(auth.Id)
+            .Returns(user);
+
+        _keysManagerMock
+            .ValidateTotpCode(user.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode)
+            .Returns(true);
+
+        // Act
+        await _service.DeactivateTwoFactorAuthAsync(auth, dto);
+
+        // Assert
+        Assert.False(user.TwoFactorAuth.Enabled);
 
         await _storeMock
             .Users
