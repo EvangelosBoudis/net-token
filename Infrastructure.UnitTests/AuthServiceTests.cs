@@ -28,9 +28,9 @@ public class AuthServiceTests
     private readonly TestUtil _util;
     private readonly IStore _storeMock = Substitute.For<IStore>();
     private readonly IKeysManager _keysManagerMock = Substitute.For<IKeysManager>();
-    private readonly ITokenProvider _tokenProviderMock = Substitute.For<ITokenProvider>();
-    private readonly IPasswordHandler _passwordHandlerMock = Substitute.For<IPasswordHandler>();
-    private readonly INotificationSender _notificationSenderMock = Substitute.For<INotificationSender>();
+    private readonly ITokenProvider _providerMock = Substitute.For<ITokenProvider>();
+    private readonly IPasswordHandler _handlerMock = Substitute.For<IPasswordHandler>();
+    private readonly INotificationSender _senderMock = Substitute.For<INotificationSender>();
 
     public AuthServiceTests()
     {
@@ -41,9 +41,9 @@ public class AuthServiceTests
             _storeMock,
             options,
             _keysManagerMock,
-            _tokenProviderMock,
-            _passwordHandlerMock,
-            _notificationSenderMock);
+            _providerMock,
+            _handlerMock,
+            _senderMock);
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public class AuthServiceTests
             .Returns(code);
 
         var encrypted = new EncryptedPassword(_util.Hash, _util.Salt);
-        _passwordHandlerMock
+        _handlerMock
             .Encrypt(dto.Password)
             .Returns(encrypted);
 
@@ -105,7 +105,7 @@ public class AuthServiceTests
             .Received(1)
             .GenerateTotpCode();
 
-        _passwordHandlerMock
+        _handlerMock
             .Received(1)
             .Encrypt(dto.Password);
 
@@ -127,7 +127,7 @@ public class AuthServiceTests
             .Received(1)
             .FlushAsync();
 
-        await _notificationSenderMock
+        await _senderMock
             .Received(1)
             .SendEmailAsync(
                 Arg.Is<EmailDto>(email =>
@@ -419,7 +419,7 @@ public class AuthServiceTests
             .Received(1)
             .FlushAsync();
 
-        await _notificationSenderMock
+        await _senderMock
             .Received(1)
             .SendEmailAsync(
                 Arg.Is<EmailDto>(email =>
@@ -447,7 +447,7 @@ public class AuthServiceTests
             .Received(1)
             .FindByEmailAsync(dto.Email);
 
-        _passwordHandlerMock
+        _handlerMock
             .DidNotReceive()
             .Decrypt(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
 
@@ -478,7 +478,7 @@ public class AuthServiceTests
             .Received(1)
             .FindByEmailAsync(dto.Email);
 
-        _passwordHandlerMock
+        _handlerMock
             .DidNotReceive()
             .Decrypt(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
 
@@ -511,7 +511,7 @@ public class AuthServiceTests
             .Received(1)
             .FindByEmailAsync(dto.Email);
 
-        _passwordHandlerMock
+        _handlerMock
             .DidNotReceive()
             .Decrypt(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
 
@@ -536,7 +536,7 @@ public class AuthServiceTests
             .FindByEmailAsync(dto.Email)
             .Returns(user);
 
-        _passwordHandlerMock
+        _handlerMock
             .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt)
             .Returns(false);
 
@@ -553,7 +553,7 @@ public class AuthServiceTests
             .Received(1)
             .FindByEmailAsync(dto.Email);
 
-        _passwordHandlerMock
+        _handlerMock
             .Received(1)
             .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt);
 
@@ -578,7 +578,7 @@ public class AuthServiceTests
             .FindByEmailAsync(dto.Email)
             .Returns(user);
 
-        _passwordHandlerMock
+        _handlerMock
             .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt)
             .Returns(false);
 
@@ -597,7 +597,7 @@ public class AuthServiceTests
             .Received(1)
             .FindByEmailAsync(dto.Email);
 
-        _passwordHandlerMock
+        _handlerMock
             .Received(1)
             .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt);
 
@@ -623,7 +623,7 @@ public class AuthServiceTests
             .FindByEmailAsync(dto.Email)
             .Returns(user);
 
-        _passwordHandlerMock
+        _handlerMock
             .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt)
             .Returns(true);
 
@@ -654,7 +654,7 @@ public class AuthServiceTests
             .Received(1)
             .FindByEmailAsync(dto.Email);
 
-        _passwordHandlerMock
+        _handlerMock
             .Received(1)
             .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt);
 
@@ -684,12 +684,12 @@ public class AuthServiceTests
             .FindByEmailAsync(dto.Email)
             .Returns(user);
 
-        _passwordHandlerMock
+        _handlerMock
             .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt)
             .Returns(true);
 
         var token = new TokenData(string.Empty, string.Empty);
-        _tokenProviderMock
+        _providerMock
             .CreateToken(user)
             .Returns(token);
 
@@ -711,11 +711,11 @@ public class AuthServiceTests
             .Received(1)
             .FindByEmailAsync(dto.Email);
 
-        _passwordHandlerMock
+        _handlerMock
             .Received(1)
             .Decrypt(dto.Password, user.PasswordHash, user.PasswordSalt);
 
-        _tokenProviderMock
+        _providerMock
             .Received(1)
             .CreateToken(user);
 
@@ -870,7 +870,7 @@ public class AuthServiceTests
             .Returns(true);
 
         var token = new TokenData(string.Empty, string.Empty);
-        _tokenProviderMock
+        _providerMock
             .CreateToken(challenge.TwoFactorAuth.User)
             .Returns(token);
 
@@ -899,7 +899,7 @@ public class AuthServiceTests
             .Received(1)
             .ValidateTotpCode(challenge.TwoFactorAuth.AuthenticatorKey, dto.ConfirmationCode);
 
-        _tokenProviderMock
+        _providerMock
             .Received(1)
             .CreateToken(challenge.TwoFactorAuth.User);
 
@@ -1039,7 +1039,7 @@ public class AuthServiceTests
             .Received(1)
             .FlushAsync();
 
-        await _notificationSenderMock
+        await _senderMock
             .Received(1)
             .SendEmailAsync(
                 Arg.Is<EmailDto>(email =>
@@ -1220,7 +1220,7 @@ public class AuthServiceTests
             .Returns(code);
 
         var encrypted = new EncryptedPassword(string.Empty, string.Empty);
-        _passwordHandlerMock
+        _handlerMock
             .Encrypt(dto.Password)
             .Returns(encrypted);
 
@@ -1242,7 +1242,7 @@ public class AuthServiceTests
             .Received(1)
             .FindActiveByUserIdCodeAndTypeAsync(user.Id, dto.ConfirmationCode, OtpType.ResetPassword);
 
-        _passwordHandlerMock
+        _handlerMock
             .Received(1)
             .Encrypt(dto.Password);
 
@@ -1311,7 +1311,7 @@ public class AuthServiceTests
             .FindByIdAsync(user.Id)
             .Returns(user);
 
-        _passwordHandlerMock
+        _handlerMock
             .Decrypt(dto.CurrentPassword, user.PasswordHash, user.PasswordSalt)
             .Returns(false);
 
@@ -1324,7 +1324,7 @@ public class AuthServiceTests
             .Received(1)
             .FindByIdAsync(user.Id);
 
-        _passwordHandlerMock
+        _handlerMock
             .Received(1)
             .Decrypt(dto.CurrentPassword, user.PasswordHash, user.PasswordSalt);
     }
@@ -1344,11 +1344,11 @@ public class AuthServiceTests
             .FindByIdAsync(user.Id)
             .Returns(user);
 
-        _passwordHandlerMock
+        _handlerMock
             .Decrypt(dto.CurrentPassword, user.PasswordHash, user.PasswordSalt)
             .Returns(true);
 
-        _passwordHandlerMock
+        _handlerMock
             .Encrypt(dto.Password)
             .Returns(encrypted);
 
@@ -1364,11 +1364,11 @@ public class AuthServiceTests
             .Received(1)
             .FindByIdAsync(user.Id);
 
-        _passwordHandlerMock
+        _handlerMock
             .ReceivedWithAnyArgs(1)
             .Decrypt(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
 
-        _passwordHandlerMock
+        _handlerMock
             .Received(1)
             .Encrypt(dto.Password);
 
@@ -1383,7 +1383,7 @@ public class AuthServiceTests
         // Arrange
         var token = new TokenData(string.Empty, string.Empty);
 
-        _tokenProviderMock
+        _providerMock
             .ReadAccessToken(token.AccessToken)
             .Throws(new InvalidTokenException(token.AccessToken));
 
@@ -1391,7 +1391,7 @@ public class AuthServiceTests
         var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.RefreshTokenAsync(token));
         Assert.Equal(ErrorCode.InvalidToken, ex.ErrorCode);
 
-        _tokenProviderMock
+        _providerMock
             .Received(1)
             .ReadAccessToken(token.AccessToken);
     }
@@ -1404,7 +1404,7 @@ public class AuthServiceTests
         var details = _util.TokenDetails;
         var userId = new Guid(details.Subject);
 
-        _tokenProviderMock
+        _providerMock
             .ReadAccessToken(token.AccessToken)
             .Returns(details);
 
@@ -1417,7 +1417,7 @@ public class AuthServiceTests
         var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.RefreshTokenAsync(token));
         Assert.Equal(ErrorCode.InvalidToken, ex.ErrorCode);
 
-        _tokenProviderMock
+        _providerMock
             .Received(1)
             .ReadAccessToken(token.AccessToken);
 
@@ -1436,7 +1436,7 @@ public class AuthServiceTests
         var user = _util.User;
         user.Account.Locked = true;
 
-        _tokenProviderMock
+        _providerMock
             .ReadAccessToken(token.AccessToken)
             .Returns(details);
 
@@ -1449,7 +1449,7 @@ public class AuthServiceTests
         var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.RefreshTokenAsync(token));
         Assert.Equal(ErrorCode.LockedAccount, ex.ErrorCode);
 
-        _tokenProviderMock
+        _providerMock
             .Received(1)
             .ReadAccessToken(token.AccessToken);
 
@@ -1468,7 +1468,7 @@ public class AuthServiceTests
         var user = _util.User;
         user.Account.Locked = false;
 
-        _tokenProviderMock
+        _providerMock
             .ReadAccessToken(token.AccessToken)
             .Returns(details);
 
@@ -1486,7 +1486,7 @@ public class AuthServiceTests
         var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.RefreshTokenAsync(token));
         Assert.Equal(ErrorCode.InvalidToken, ex.ErrorCode);
 
-        _tokenProviderMock
+        _providerMock
             .Received(1)
             .ReadAccessToken(token.AccessToken);
 
@@ -1516,7 +1516,7 @@ public class AuthServiceTests
             ExpiredAt = DateTime.UtcNow // expired
         };
 
-        _tokenProviderMock
+        _providerMock
             .ReadAccessToken(token.AccessToken)
             .Returns(details);
 
@@ -1534,7 +1534,7 @@ public class AuthServiceTests
         var ex = await Assert.ThrowsAsync<AuthException>(async () => await _service.RefreshTokenAsync(token));
         Assert.Equal(ErrorCode.ExpiredToken, ex.ErrorCode);
 
-        _tokenProviderMock
+        _providerMock
             .Received(1)
             .ReadAccessToken(token.AccessToken);
 
@@ -1565,7 +1565,7 @@ public class AuthServiceTests
             ExpiredAt = DateTime.UtcNow.AddMinutes(2) // not expired
         };
 
-        _tokenProviderMock
+        _providerMock
             .ReadAccessToken(token.AccessToken)
             .Returns(details);
 
@@ -1580,7 +1580,7 @@ public class AuthServiceTests
             .Returns(refresh);
 
         var nToken = new TokenData(string.Empty, "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9");
-        _tokenProviderMock
+        _providerMock
             .CreateToken(user)
             .Returns(nToken);
 
@@ -1594,7 +1594,7 @@ public class AuthServiceTests
         Assert.Equal(refresh.ExpiredAt, user.RefreshTokens.First().ExpiredAt);
 
         // Assert
-        _tokenProviderMock
+        _providerMock
             .Received(1)
             .ReadAccessToken(token.AccessToken);
 
@@ -1608,7 +1608,7 @@ public class AuthServiceTests
             .Received(1)
             .FindActiveByValueAsync(token.RefreshToken);
 
-        _tokenProviderMock
+        _providerMock
             .Received(1)
             .CreateToken(user);
 
@@ -1811,7 +1811,7 @@ public class AuthServiceTests
             .Received(1)
             .GenerateTotpUri(key, user.Email, options.Issuer);
 
-        await _notificationSenderMock
+        await _senderMock
             .Received(1)
             .SendEmailAsync(
                 Arg.Is<EmailDto>(email =>
