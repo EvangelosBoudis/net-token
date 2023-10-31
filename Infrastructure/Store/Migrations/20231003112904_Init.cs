@@ -15,14 +15,14 @@ namespace Infrastructure.Store.Migrations
                 name: "users",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    username = table.Column<string>(type: "TEXT", nullable: false),
-                    email = table.Column<string>(type: "TEXT", nullable: false),
-                    email_confirmed = table.Column<bool>(type: "INTEGER", nullable: false),
-                    phone_number = table.Column<string>(type: "TEXT", nullable: true),
-                    phone_number_confirmed = table.Column<bool>(type: "INTEGER", nullable: false),
-                    password_hash = table.Column<string>(type: "TEXT", nullable: false),
-                    password_salt = table.Column<string>(type: "TEXT", nullable: false)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    username = table.Column<string>(type: "text", nullable: false),
+                    email = table.Column<string>(type: "text", nullable: false),
+                    email_confirmed = table.Column<bool>(type: "boolean", nullable: false),
+                    phone_number = table.Column<string>(type: "text", nullable: true),
+                    phone_number_confirmed = table.Column<bool>(type: "boolean", nullable: false),
+                    password_hash = table.Column<string>(type: "text", nullable: false),
+                    password_salt = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -33,13 +33,13 @@ namespace Infrastructure.Store.Migrations
                 name: "accounts",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    created_at = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    confirmed = table.Column<bool>(type: "INTEGER", nullable: false),
-                    failed_access_attempts = table.Column<int>(type: "INTEGER", nullable: false),
-                    locked = table.Column<bool>(type: "INTEGER", nullable: false),
-                    lock_end_at = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    user_id = table.Column<Guid>(type: "TEXT", nullable: false)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    confirmed = table.Column<bool>(type: "boolean", nullable: false),
+                    failed_access_attempts = table.Column<int>(type: "integer", nullable: false),
+                    locked = table.Column<bool>(type: "boolean", nullable: false),
+                    lock_end_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -56,14 +56,14 @@ namespace Infrastructure.Store.Migrations
                 name: "one_time_passwords",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    code = table.Column<string>(type: "TEXT", nullable: false),
-                    type = table.Column<int>(type: "INTEGER", nullable: false),
-                    created_at = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    redeemed = table.Column<bool>(type: "INTEGER", nullable: false),
-                    disabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                    expired_at = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    user_id = table.Column<Guid>(type: "TEXT", nullable: false)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    code = table.Column<string>(type: "text", nullable: false),
+                    type = table.Column<int>(type: "integer", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    redeemed = table.Column<bool>(type: "boolean", nullable: false),
+                    disabled = table.Column<bool>(type: "boolean", nullable: false),
+                    expired_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -80,13 +80,13 @@ namespace Infrastructure.Store.Migrations
                 name: "refresh_tokens",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    value = table.Column<string>(type: "TEXT", nullable: false),
-                    created_at = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    disabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                    revoked = table.Column<bool>(type: "INTEGER", nullable: false),
-                    expired_at = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    user_id = table.Column<Guid>(type: "TEXT", nullable: false)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    value = table.Column<string>(type: "text", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    disabled = table.Column<bool>(type: "boolean", nullable: false),
+                    revoked = table.Column<bool>(type: "boolean", nullable: false),
+                    expired_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -103,10 +103,10 @@ namespace Infrastructure.Store.Migrations
                 name: "two_factor_authentications",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    enabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                    authenticator_key = table.Column<string>(type: "TEXT", nullable: false),
-                    user_id = table.Column<Guid>(type: "TEXT", nullable: false)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    enabled = table.Column<bool>(type: "boolean", nullable: false),
+                    authenticator_key = table.Column<string>(type: "text", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -123,12 +123,12 @@ namespace Infrastructure.Store.Migrations
                 name: "challenges",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    key = table.Column<string>(type: "TEXT", nullable: false),
-                    created_at = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    redeemed = table.Column<bool>(type: "INTEGER", nullable: false),
-                    expired_at = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    two_factor_auth_id = table.Column<Guid>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    key = table.Column<string>(type: "text", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    redeemed = table.Column<bool>(type: "boolean", nullable: false),
+                    expired_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    two_factor_auth_id = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
