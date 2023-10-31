@@ -24,7 +24,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         var connection = configuration.GetSection("Datasource").Get<string>()!;
-        services.AddDbContext<DataContext>(options => { options.UseSqlite(connection); });
+        services.AddDbContext<DataContext>(options => { options.UseNpgsql(connection); });
         services.BuildServiceProvider().GetRequiredService<DataContext>().Database.MigrateAsync();
 
         services.AddAuthentication().AddJwtBearer();
