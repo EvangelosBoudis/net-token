@@ -10,7 +10,7 @@ services:
     container_name: auth_api
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Api/Dockerfile
     ports:
       - "8080:80"
     depends_on:
