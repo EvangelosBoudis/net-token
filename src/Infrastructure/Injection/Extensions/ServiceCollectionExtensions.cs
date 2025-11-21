@@ -25,7 +25,7 @@ public static class ServiceCollectionExtensions
     {
         var connection = configuration.GetSection("Datasource").Get<string>()!;
         services.AddDbContext<DataContext>(options => { options.UseNpgsql(connection); });
-        services.BuildServiceProvider().GetRequiredService<DataContext>().Database.MigrateAsync();
+        services.BuildServiceProvider().GetRequiredService<DataContext>().Database.Migrate();
 
         services.AddAuthentication().AddJwtBearer();
 
