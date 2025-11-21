@@ -8,11 +8,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{3A3DE2A3
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\Application\Application.csproj", "{CB0B98A4-F99D-4CA6-AE0C-6001BD66877B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\Infrastructure\Infrastructure.csproj", "{A37C4843-0A4C-4C70-A368-6D56B4CDAA40}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Forteio.Identity", "src\Forteio.Identity\Forteio.Identity.csproj", "{A37C4843-0A4C-4C70-A368-6D56B4CDAA40}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api", "src\Api\Api.csproj", "{5565D6AA-7CE5-4B0A-A2E4-C178378D792E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetToken.Api", "src\NetToken.Api\NetToken.Api.csproj", "{5565D6AA-7CE5-4B0A-A2E4-C178378D792E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure.UnitTests", "tests\Infrastructure.UnitTests\Infrastructure.UnitTests.csproj", "{89465C99-77A2-4C0C-9296-A6DA192D7E99}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Forteio.Identity.UnitTests", "tests\Forteio.Identity.UnitTests\Forteio.Identity.UnitTests.csproj", "{89465C99-77A2-4C0C-9296-A6DA192D7E99}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
